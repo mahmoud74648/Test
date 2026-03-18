@@ -1,0 +1,657 @@
+from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.requests import Request
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import RedirectResponse, JSONResponse
+from sqlalchemy.orm import Session
+from sqlalchemy import func, case
+from typing import Optional, List
+import calendar
+from datetime import date as dt_date
+import os
+import hmac
+from urllib.parse import quote
+import models, schemas
+from database import engine, get_db
+from import_excel import import_from_excel, import_from_excel_bytes
+
+# Create tables (new columns added)
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="HR Management System", version="2.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+def _safe_next_url(next_url: Optional[str]) -> str:
+    if not next_url:
+        return "/dashboard"
+    if not next_url.startswith("/"):
+        return "/dashboard"
+    if next_url.startswith("//") or "://" in next_url:
+        return "/dashboard"
+    return next_url
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    path = request.url.path
+    if (
+        path.startswith("/static")
+        or path in {"/login", "/logout", "/openapi.json", "/docs", "/redoc"}
+    ):
+        return await call_next(request)
+
+    if request.session.get("auth") is True:
+        return await call_next(request)
+
+    html_exact = {"/", "/dashboard", "/daily", "/departments-page", "/upload"}
+    is_html = path in html_exact or path.startswith("/department/") or path.startswith("/employee-page/")
+    if is_html:
+        next_url = request.url.path
+        if request.url.query:
+            next_url = f"{next_url}?{request.url.query}"
+        return RedirectResponse(url=f"/login?next={quote(next_url, safe='')}", status_code=302)
+
+    return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("HR_SECRET_KEY", "dev-secret-key"),
+    same_site="lax",
+)
+
+@app.get("/login", include_in_schema=False)
+def login_page(request: Request, next: Optional[str] = None, error: Optional[str] = None):
+    if request.session.get("auth") is True:
+        return RedirectResponse(url="/dashboard", status_code=302)
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "next": _safe_next_url(next), "error": error},
+    )
+
+@app.post("/login", include_in_schema=False)
+def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    next: Optional[str] = Form(None),
+):
+    env_user = os.environ.get("HR_USERNAME", "admin")
+    env_pass = os.environ.get("HR_PASSWORD", "HR@2025")
+    ok = hmac.compare_digest(username, env_user) and hmac.compare_digest(password, env_pass)
+    if not ok:
+        return RedirectResponse(
+            url=f"/login?error=1&next={quote(_safe_next_url(next), safe='')}",
+            status_code=302,
+        )
+    request.session["auth"] = True
+    return RedirectResponse(url=_safe_next_url(next), status_code=302)
+
+@app.get("/logout", include_in_schema=False)
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=302)
+
+
+# ── Month Overview ─────────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+def month_overview(request: Request):
+    today = dt_date.today()
+    year_month = f"{today.year:04d}-{today.month:02d}"
+    days_in_month = calendar.monthrange(today.year, today.month)[1]
+    return templates.TemplateResponse(
+        "month.html",
+        {"request": request, "year_month": year_month, "days_in_month": days_in_month},
+    )
+
+
+@app.get("/latest-date")
+def latest_date(db: Session = Depends(get_db)):
+    latest = db.query(func.max(models.AttendanceRecord.date)).scalar()
+    return {"date": str(latest) if latest else None}
+
+
+@app.get("/calendar-status")
+def calendar_status(
+    month: Optional[str] = Query(None, description="Month in YYYY-MM"),
+    db: Session = Depends(get_db),
+):
+    ym = month
+    if not ym:
+        today = dt_date.today()
+        ym = f"{today.year:04d}-{today.month:02d}"
+    rows = (
+        db.query(func.distinct(models.AttendanceRecord.date))
+        .filter(models.AttendanceRecord.date.like(f"{ym}%"))
+        .all()
+    )
+    dates = sorted([r[0] for r in rows if r[0]])
+    return {"month": ym, "dates": dates}
+
+
+# ── Upload ─────────────────────────────────────────────────────────────────────
+@app.get("/upload", include_in_schema=False)
+def upload_page(request: Request):
+    return templates.TemplateResponse("upload.html", {"request": request})
+
+
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+@app.get("/dashboard", include_in_schema=False)
+def dashboard(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/daily", include_in_schema=False)
+def daily(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+# ── Stats ──────────────────────────────────────────────────────────────────────
+@app.get("/stats")
+def get_stats(db: Session = Depends(get_db)):
+    # Filter stats to only include 'القوة' and 'Employee' (civilians) and exclude 'vistor'
+    q_filter = (
+        models.Employee.dept.like("%القوة%") &
+        ~models.Employee.dept.like("%vistor%") &
+        (models.Employee.job_title == "Employee")
+    )
+    
+    total       = db.query(func.count(models.Employee.id)).filter(q_filter).scalar()
+    active      = db.query(func.count(models.Employee.id)).filter(q_filter, models.Employee.status == "active").scalar()
+    avg_rests   = db.query(func.avg(models.Employee.rests)).filter(q_filter).scalar() or 0
+    dept_count  = db.query(func.count(func.distinct(models.Employee.dept))).filter(q_filter).scalar()
+
+    dept_breakdown = (
+        db.query(models.Employee.dept, func.count(models.Employee.id).label("count"))
+        .filter(q_filter)
+        .group_by(models.Employee.dept)
+        .all()
+    )
+
+    return {
+        "total_employees": total,
+        "active_employees": active,
+        "avg_leave_days": round(float(avg_rests), 1),
+        "department_count": dept_count,
+        "dept_breakdown": [{"dept": d, "count": c} for d, c in dept_breakdown],
+    }
+
+
+# ── Departments ────────────────────────────────────────────────────────────────
+@app.get("/departments", response_model=List[str])
+def get_departments(db: Session = Depends(get_db)):
+    rows = db.query(func.distinct(models.Employee.dept)).all()
+    return [r[0] for r in rows if r[0]]
+
+
+# ── Employees ──────────────────────────────────────────────────────────────────
+@app.get("/employees", response_model=List[schemas.EmployeeOut])
+def list_employees(
+    search: Optional[str] = Query(None, description="Search by name or job title"),
+    dept:   Optional[str] = Query(None, description="Filter by department"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    db:     Session = Depends(get_db),
+):
+    q = db.query(models.Employee)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            models.Employee.name.ilike(term) |
+            models.Employee.job_title.ilike(term) |
+            models.Employee.phone.ilike(term) |
+            models.Employee.email.ilike(term) |
+            models.Employee.employee_code.ilike(term)
+        )
+    if dept:
+        q = q.filter(models.Employee.dept == dept)
+    if status:
+        q = q.filter(models.Employee.status == status)
+    return q.order_by(models.Employee.id).all()
+
+
+@app.post("/employees", response_model=schemas.EmployeeOut, status_code=201)
+def create_employee(payload: schemas.EmployeeCreate, db: Session = Depends(get_db)):
+    emp = models.Employee(**payload.model_dump())
+    db.add(emp)
+    db.commit()
+    db.refresh(emp)
+    return emp
+
+
+@app.get("/employees/{emp_id}", response_model=schemas.EmployeeOut)
+def get_employee(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return emp
+
+
+@app.put("/employees/{emp_id}", response_model=schemas.EmployeeOut)
+def update_employee(emp_id: int, payload: schemas.EmployeeUpdate, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(emp, field, value)
+    db.commit()
+    db.refresh(emp)
+    return emp
+
+
+@app.delete("/employees/{emp_id}", status_code=204)
+def delete_employee(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    db.delete(emp)
+    db.commit()
+
+
+# ── Import Excel ───────────────────────────────────────────────────────────────
+@app.post("/import/excel", response_model=schemas.ImportExcelResult)
+def import_excel(payload: schemas.ImportExcelRequest, db: Session = Depends(get_db)):
+    _ = db
+    res = import_from_excel(file=payload.file, reset_db=payload.reset_db)
+    return schemas.ImportExcelResult(
+        file=res["file"],
+        employees_upserted=res["employees_upserted"],
+        attendance_rows_upserted=res["attendance_rows_upserted"],
+        distinct_dates=res["distinct_dates"],
+    )
+
+
+@app.post("/import/upload", response_model=schemas.ImportExcelResult)
+async def import_upload(
+    file: UploadFile = File(...),
+    reset_db: bool = Form(False),
+    db: Session = Depends(get_db),
+):
+    _ = db
+    content = await file.read()
+    res = import_from_excel_bytes(content, file_name=file.filename or "upload.xlsx", reset_db=reset_db)
+    return schemas.ImportExcelResult(
+        file=res["file"],
+        employees_upserted=res["employees_upserted"],
+        attendance_rows_upserted=res["attendance_rows_upserted"],
+        distinct_dates=res["distinct_dates"],
+    )
+
+
+# ── Attendance ────────────────────────────────────────────────────────────────
+@app.get("/attendance", response_model=List[schemas.AttendanceRowOut])
+def list_attendance(
+    date: Optional[str] = Query(None, description="Filter by date (YYYY-MM-DD)"),
+    employee_code: Optional[str] = Query(None, description="Filter by employee code"),
+    db: Session = Depends(get_db),
+):
+    q = db.query(
+        models.AttendanceRecord,
+        models.Employee.employee_code,
+        models.Employee.name,
+        models.Employee.dept,
+    ).join(models.Employee)
+    if date:
+        q = q.filter(models.AttendanceRecord.date == date)
+    if employee_code:
+        q = q.filter(models.Employee.employee_code == employee_code)
+    rows = q.order_by(models.AttendanceRecord.date.desc(), models.AttendanceRecord.id.desc()).all()
+    return [
+        schemas.AttendanceRowOut(
+            employee_code=code,
+            name=name,
+            dept=dept,
+            date=rec.date,
+            actual_check_in_time=rec.actual_check_in_time,
+            actual_check_out_time=rec.actual_check_out_time,
+            attendance_records=rec.attendance_records,
+            total_work_hours=rec.total_work_hours,
+        )
+        for rec, code, name, dept in rows
+    ]
+
+
+@app.get("/leaves", response_model=List[schemas.LeaveRowOut])
+def list_leaves(
+    date: Optional[str] = Query(None, description="Filter by date (YYYY-MM-DD)"),
+    employee_code: Optional[str] = Query(None, description="Filter by employee code"),
+    db: Session = Depends(get_db),
+):
+    q = db.query(
+        models.AttendanceRecord,
+        models.Employee.employee_code,
+        models.Employee.name,
+        models.Employee.dept,
+    ).join(models.Employee)
+    if date:
+        q = q.filter(models.AttendanceRecord.date == date)
+    if employee_code:
+        q = q.filter(models.Employee.employee_code == employee_code)
+    rows = q.order_by(models.AttendanceRecord.date.desc(), models.AttendanceRecord.id.desc()).all()
+    return [
+        schemas.LeaveRowOut(
+            employee_code=code,
+            name=name,
+            dept=dept,
+            date=rec.date,
+            annual_leave=float(rec.annual_leave or 0.0),
+            personal_leave=float(rec.personal_leave or 0.0),
+        )
+        for rec, code, name, dept in rows
+        if (rec.annual_leave or 0) != 0 or (rec.personal_leave or 0) != 0
+    ]
+
+
+@app.get("/monthly-stats", response_model=List[schemas.MonthlyStatsOut])
+def list_monthly_stats(
+    month: Optional[str] = Query(None, description="Month in YYYY-MM"),
+    db: Session = Depends(get_db),
+):
+    ym = month
+    if not ym:
+        latest = db.query(func.max(models.AttendanceRecord.date)).scalar()
+        if latest:
+            ym = str(latest)[:7]
+    if not ym:
+        return []
+
+    rows = (
+        db.query(models.MonthlyEmployeeStats, models.Employee.employee_code, models.Employee.name, models.Employee.dept)
+        .join(models.Employee, models.MonthlyEmployeeStats.employee_id == models.Employee.id)
+        .filter(models.MonthlyEmployeeStats.year_month == ym)
+        .order_by(models.Employee.employee_code.asc())
+        .all()
+    )
+    return [
+        schemas.MonthlyStatsOut(
+            employee_code=code,
+            name=name,
+            dept=dept,
+            year_month=ms.year_month,
+            total_work_minutes=int(ms.total_work_minutes or 0),
+            days_present=int(ms.days_present or 0),
+            days_absent=int(ms.days_absent or 0),
+            annual_leave_days=float(ms.annual_leave_days or 0.0),
+            casual_leave_days=float(ms.casual_leave_days or 0.0),
+            ot_total=float(ms.ot_total or 0.0),
+        )
+        for ms, code, name, dept in rows
+    ]
+
+
+@app.get("/mtd-stats", response_model=List[schemas.MtdStatsOut])
+def month_to_date_stats(
+    date: Optional[str] = Query(None, description="To date (YYYY-MM-DD)"),
+    db: Session = Depends(get_db),
+):
+    to_date = date
+    if not to_date:
+        latest = db.query(func.max(models.AttendanceRecord.date)).scalar()
+        if latest:
+            to_date = str(latest)
+    if not to_date or len(to_date) < 10:
+        return []
+
+    ym = to_date[:7]
+    rows = (
+        db.query(
+            models.Employee.employee_code,
+            models.Employee.name,
+            models.Employee.dept,
+            func.coalesce(func.sum(case((models.AttendanceRecord.attendance_status == "A", 1), else_=0)), 0).label("days_absent"),
+            func.coalesce(func.sum(case((models.AttendanceRecord.attendance_status != "A", 1), else_=0)), 0).label("days_present"),
+            func.coalesce(func.sum(case((models.AttendanceRecord.attendance_status.in_(["L", "LE"]), 1), else_=0)), 0).label("delays"),
+            func.coalesce(func.sum(case((models.AttendanceRecord.attendance_status.in_(["E", "LE"]), 1), else_=0)), 0).label("permissions"),
+            func.coalesce(func.sum(func.coalesce(models.AttendanceRecord.annual_leave, 0.0)), 0.0).label("annual_leave_days"),
+            func.coalesce(func.sum(func.coalesce(models.AttendanceRecord.personal_leave, 0.0)), 0.0).label("casual_leave_days"),
+        )
+        .join(models.Employee, models.AttendanceRecord.employee_id == models.Employee.id)
+        .filter(models.AttendanceRecord.date.like(f"{ym}%"))
+        .filter(models.AttendanceRecord.date <= to_date)
+        .group_by(models.Employee.employee_code, models.Employee.name, models.Employee.dept)
+        .order_by(models.Employee.employee_code.asc())
+        .all()
+    )
+
+    return [
+        schemas.MtdStatsOut(
+            employee_code=code,
+            name=name,
+            dept=dept,
+            year_month=ym,
+            to_date=to_date,
+            days_present=int(days_present or 0),
+            days_absent=int(days_absent or 0),
+            delays=int(delays or 0),
+            permissions=int(permissions or 0),
+            annual_leave_days=float(annual_leave_days or 0.0),
+            casual_leave_days=float(casual_leave_days or 0.0),
+        )
+        for (
+            code,
+            name,
+            dept,
+            days_absent,
+            days_present,
+            delays,
+            permissions,
+            annual_leave_days,
+            casual_leave_days,
+        ) in rows
+    ]
+
+
+@app.get("/employees/{emp_id}/attendance", response_model=List[schemas.AttendanceRecordOut])
+def employee_attendance(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return (
+        db.query(models.AttendanceRecord)
+        .filter(models.AttendanceRecord.employee_id == emp_id)
+        .order_by(models.AttendanceRecord.date.desc(), models.AttendanceRecord.id.desc())
+        .all()
+    )
+
+
+# ── Department Pages ───────────────────────────────────────────────────────────
+@app.get("/departments-page", include_in_schema=False)
+def departments_page(request: Request):
+    return templates.TemplateResponse("departments.html", {"request": request})
+
+
+@app.get("/department/{dept_name}", include_in_schema=False)
+def department_page(dept_name: str, request: Request):
+    return templates.TemplateResponse(
+        "department.html", {"request": request, "dept_name": dept_name}
+    )
+
+
+@app.get("/employee-page/{emp_id}", include_in_schema=False)
+def employee_page(emp_id: int, request: Request):
+    return templates.TemplateResponse(
+        "employee.html", {"request": request, "emp_id": emp_id}
+    )
+
+
+# ── Employee Summary ───────────────────────────────────────────────────────────
+@app.get("/employees/{emp_id}/summary", response_model=schemas.EmployeeSummaryOut)
+def employee_summary(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    total_annual  = sum(l.days  for l in emp.leaves if l.leave_type == "annual")
+    total_casual  = sum(l.days  for l in emp.leaves if l.leave_type == "casual")
+    total_hours   = sum(p.hours for p in emp.permissions)
+    total_deduct_d  = sum(d.amount for d in emp.deductions if d.deduction_type == "days")
+    total_deduct_m  = sum(d.amount for d in emp.deductions if d.deduction_type == "money")
+
+    return schemas.EmployeeSummaryOut(
+        id=emp.id,
+        employee_code=emp.employee_code,
+        name=emp.name,
+        dept=emp.dept,
+        job_title=emp.job_title,
+        status=emp.status,
+        total_annual_leave=total_annual,
+        total_casual_leave=total_casual,
+        total_permission_hours=total_hours,
+        total_deduction_days=total_deduct_d,
+        total_deduction_money=total_deduct_m,
+    )
+
+
+# ── Department Employees Summary ───────────────────────────────────────────────
+@app.get("/departments/{dept_name}/employees", response_model=List[schemas.EmployeeSummaryOut])
+def dept_employees(dept_name: str, db: Session = Depends(get_db)):
+    # Filter by department, showing only active civilians
+    employees = (
+        db.query(models.Employee)
+        .filter(models.Employee.dept == dept_name)
+        .filter(models.Employee.job_title == "Employee")
+        .order_by(models.Employee.name)
+        .all()
+    )
+    result = []
+    for emp in employees:
+        total_annual = sum(l.days  for l in emp.leaves if l.leave_type == "annual")
+        total_casual = sum(l.days  for l in emp.leaves if l.leave_type == "casual")
+        total_hours  = sum(p.hours for p in emp.permissions)
+        total_deduct_d  = sum(d.amount for d in emp.deductions if d.deduction_type == "days")
+        total_deduct_m  = sum(d.amount for d in emp.deductions if d.deduction_type == "money")
+        result.append(schemas.EmployeeSummaryOut(
+            id=emp.id,
+            employee_code=emp.employee_code,
+            name=emp.name,
+            dept=emp.dept,
+            job_title=emp.job_title,
+            status=emp.status,
+            total_annual_leave=total_annual,
+            total_casual_leave=total_casual,
+            total_permission_hours=total_hours,
+            total_deduction_days=total_deduct_d,
+            total_deduction_money=total_deduct_m,
+        ))
+    return result
+
+
+# ── Manual Leaves ──────────────────────────────────────────────────────────────
+@app.post("/employees/{emp_id}/leaves", response_model=schemas.LeaveOut, status_code=201)
+def add_leave(emp_id: int, payload: schemas.LeaveCreate, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    from datetime import datetime as _dt
+    leave = models.Leave(
+        employee_id=emp_id,
+        leave_type=payload.leave_type,
+        days=payload.days,
+        date=payload.date,
+        note=payload.note or "",
+        created_at=_dt.now().strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    db.add(leave)
+    db.commit()
+    db.refresh(leave)
+    return leave
+
+
+@app.get("/employees/{emp_id}/leaves", response_model=List[schemas.LeaveOut])
+def list_employee_leaves(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return db.query(models.Leave).filter(models.Leave.employee_id == emp_id).order_by(models.Leave.date.desc()).all()
+
+
+@app.delete("/employees/{emp_id}/leaves/{leave_id}", status_code=204)
+def delete_leave(emp_id: int, leave_id: int, db: Session = Depends(get_db)):
+    leave = db.query(models.Leave).filter(models.Leave.id == leave_id, models.Leave.employee_id == emp_id).first()
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave not found")
+    db.delete(leave)
+    db.commit()
+
+
+# ── Manual Permissions ─────────────────────────────────────────────────────────
+@app.post("/employees/{emp_id}/permissions", response_model=schemas.PermissionOut, status_code=201)
+def add_permission(emp_id: int, payload: schemas.PermissionCreate, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    from datetime import datetime as _dt
+    perm = models.Permission(
+        employee_id=emp_id,
+        hours=payload.hours,
+        date=payload.date,
+        note=payload.note or "",
+        created_at=_dt.now().strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    db.add(perm)
+    db.commit()
+    db.refresh(perm)
+    return perm
+
+
+@app.get("/employees/{emp_id}/permissions", response_model=List[schemas.PermissionOut])
+def list_employee_permissions(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return db.query(models.Permission).filter(models.Permission.employee_id == emp_id).order_by(models.Permission.date.desc()).all()
+
+
+@app.delete("/employees/{emp_id}/permissions/{perm_id}", status_code=204)
+def delete_permission(emp_id: int, perm_id: int, db: Session = Depends(get_db)):
+    perm = db.query(models.Permission).filter(models.Permission.id == perm_id, models.Permission.employee_id == emp_id).first()
+    if not perm:
+        raise HTTPException(status_code=404, detail="Permission not found")
+    db.delete(perm)
+    db.commit()
+
+
+# ── Manual Deductions ──────────────────────────────────────────────────────────
+@app.post("/employees/{emp_id}/deductions", response_model=schemas.DeductionOut, status_code=201)
+def add_deduction(emp_id: int, payload: schemas.DeductionCreate, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    from datetime import datetime as _dt
+    ded = models.Deduction(
+        employee_id=emp_id,
+        deduction_type=payload.deduction_type,
+        amount=payload.amount,
+        reason=payload.reason or "",
+        date=payload.date,
+        created_at=_dt.now().strftime("%Y-%m-%d %H:%M:%S"),
+    )
+    db.add(ded)
+    db.commit()
+    db.refresh(ded)
+    return ded
+
+
+@app.get("/employees/{emp_id}/deductions", response_model=List[schemas.DeductionOut])
+def list_employee_deductions(emp_id: int, db: Session = Depends(get_db)):
+    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return db.query(models.Deduction).filter(models.Deduction.employee_id == emp_id).order_by(models.Deduction.date.desc()).all()
+
+
+@app.delete("/employees/{emp_id}/deductions/{ded_id}", status_code=204)
+def delete_deduction(emp_id: int, ded_id: int, db: Session = Depends(get_db)):
+    ded = db.query(models.Deduction).filter(models.Deduction.id == ded_id, models.Deduction.employee_id == emp_id).first()
+    if not ded:
+        raise HTTPException(status_code=404, detail="Deduction not found")
+    db.delete(ded)
+    db.commit()

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HR Management System</title>
+  <meta name="description" content="Modern HR dashboard for managing employees and departments." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    #empTable.attendance-table {
+      table-layout: fixed;
+    }
+
+    #empTable.attendance-table th,
+    #empTable.attendance-table td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #empTable.attendance-table .col-id {
+      width: 84px;
+    }
+
+    #empTable.attendance-table .col-name {
+      width: 220px;
+    }
+
+    #empTable.attendance-table .col-dept {
+      width: 260px;
+    }
+
+    #empTable.attendance-table .col-date {
+      width: 120px;
+    }
+
+    #empTable.attendance-table .col-records {
+      width: 240px;
+    }
+
+    #empTable.attendance-table .col-work {
+      width: 140px;
+      text-align: right;
+    }
+
+    #empTable.attendance-table td.col-records {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <span class="brand-name">HR<span class="accent">System</span></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
+
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- KPI Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card" id="kpi-total">
+        <div class="kpi-icon kpi-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">جميع العاملين</span>
+          <span class="kpi-value" id="stat-total">—</span>
+        </div>
+      </div>
+      <div class="kpi-card" id="kpi-depts">
+        <div class="kpi-icon kpi-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">الإدارات</span>
+          <span class="kpi-value" id="stat-depts">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filter Bar -->
+    <section class="toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="بحث بالاسم أو الكود…"
+          oninput="filterTable()" />
+      </div>
+      <input id="dateFilter" class="select-filter" type="date" onchange="filterTable()" />
+      <label class="select-filter" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
+        <input id="forceFilter" type="checkbox" checked onchange="filterTable()" />
+        <span>القوة فقط</span>
+      </label>
+    </section>
+
+    <!-- Attendance Table -->
+    <section class="table-card">
+      <div class="table-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2 class="table-title" id="tableTitle">Attendance</h2>
+        </div>
+        <span class="badge" id="rowCount">0</span>
+      </div>
+      <div class="table-wrap">
+        <table id="empTable" class="attendance-table">
+          <thead id="tableHead">
+            <tr>
+              <th class="col-id">ID</th>
+              <th class="col-name">Name</th>
+              <th class="col-dept">Department</th>
+              <th class="col-date">Date</th>
+              <th class="col-records">Attendance Records</th>
+              <th class="col-work">Total Work Hours</th>
+            </tr>
+          </thead>
+          <tbody id="empBody">
+            <tr>
+              <td colspan="6" class="loading-row">Loading attendance…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+
+</html>

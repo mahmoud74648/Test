@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Daily Sheet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="main" style="max-width:900px;margin:0 auto;padding-top:48px">
+    <section class="table-card" style="padding:24px">
+      <div class="table-header" style="margin-bottom:16px">
+        <h2 class="table-title">Daily Excel Import</h2>
+        <span class="badge" id="uploadStatus">Ready</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="display:block;margin-bottom:8px;font-weight:600">Date (YYYY-MM-DD)</label>
+          <input id="selectedDate" type="date" style="width:100%" />
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:8px;font-weight:600">Select daily Excel sheet (.xlsx)</label>
+          <input id="excelFile" type="file" accept=".xlsx,.xls" style="width:100%" />
+        </div>
+        <label style="display:flex;align-items:center;gap:10px">
+          <input id="resetDb" type="checkbox" />
+          <span>Reset database (use only for first setup)</span>
+        </label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="uploadExcel()">Upload & Import</button>
+          <a class="btn btn-ghost" href="/">Month Overview</a>
+          <a class="btn btn-ghost" href="/dashboard">Go to Dashboard</a>
+        </div>
+        <div class="toast" id="toast" style="position:static;opacity:1;transform:none"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const dateInput = document.getElementById('selectedDate');
+    function show(msg, type = 'success') {
+      toast.textContent = msg;
+      toast.className = `toast ${type} show`;
+    }
+    function getParam(name) {
+      const v = new URLSearchParams(window.location.search).get(name);
+      return v == null || v === '' ? null : v;
+    }
+    function initDate() {
+      const fromQuery = getParam('date');
+      if (fromQuery) { dateInput.value = fromQuery; return; }
+      const t = new Date();
+      const yyyy = t.getFullYear();
+      const mm = String(t.getMonth() + 1).padStart(2, '0');
+      const dd = String(t.getDate()).padStart(2, '0');
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    async function uploadExcel() {
+      const f = document.getElementById('excelFile').files[0];
+      if (!f) { show('Please choose an Excel file first.', 'error'); return; }
+      const selected = dateInput.value;
+      if (!selected) { show('Please choose the date first.', 'error'); return; }
+      const fd = new FormData();
+      fd.append('file', f);
+      fd.append('reset_db', document.getElementById('resetDb').checked ? 'true' : 'false');
+      document.getElementById('uploadStatus').textContent = 'Uploading...';
+      try {
+        const r = await fetch('/import/upload', { method: 'POST', body: fd });
+        if (!r.ok) throw new Error(await r.text());
+        const res = await r.json();
+        document.getElementById('uploadStatus').textContent = 'Imported';
+        const dates = (res.distinct_dates || []).map(String);
+        if (dates.length && !dates.includes(selected)) {
+          show(`Imported ${res.attendance_rows_upserted} rows, but the file dates are: ${dates.join(', ')}`, 'error');
+          return;
+        }
+        show(`Imported ${res.attendance_rows_upserted} rows for ${selected}`);
+        setTimeout(() => { window.location.href = `/dashboard?date=${encodeURIComponent(selected)}`; }, 600);
+      } catch (e) {
+        document.getElementById('uploadStatus').textContent = 'Failed';
+        show('Import failed. Make sure the file is in test0-hik format.', 'error');
+      }
+    }
+    initDate();
+  </script>
+</body>
+</html>

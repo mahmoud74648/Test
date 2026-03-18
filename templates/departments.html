@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الإدارات – HR System</title>
+  <meta name="description" content="عرض جميع الإدارات وموظفيها" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body {
+      font-family: 'Cairo', system-ui, sans-serif;
+    }
+
+    .table-wrap table {
+      direction: rtl;
+    }
+
+    .table-wrap thead th {
+      text-align: right;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .table-wrap tbody td {
+      text-align: right;
+    }
+
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 0;
+    }
+
+    .dept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
+      animation: fadeUp .4s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dept-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--blue), var(--purple));
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .dept-card:hover {
+      border-color: var(--blue);
+      box-shadow: 0 0 32px rgba(79, 142, 247, .15);
+      transform: translateY(-2px);
+    }
+
+    .dept-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--blue-dim), var(--purple-dim));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .dept-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--blue);
+    }
+
+    .dept-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .dept-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dept-count {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--blue);
+      letter-spacing: -1px;
+    }
+
+    .dept-count-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .dept-arrow {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: var(--text-muted);
+      transition: color .2s, transform .2s;
+    }
+
+    .dept-card:hover .dept-arrow {
+      color: var(--blue);
+      transform: translateX(-4px);
+    }
+
+    .dept-arrow svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .page-hero {
+      background: linear-gradient(135deg, #141a2e 0%, #1a1f3a 60%, #0f1628 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .hero-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .hero-icon svg {
+      width: 30px;
+      height: 30px;
+      color: #fff;
+    }
+
+    .hero-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .hero-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: var(--text-muted);
+      font-size: 14px;
+      gap: 12px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <span class="brand-name">HR<span class="accent">System</span></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a class="btn btn-ghost" href="/">الرئيسية</a>
+        <a class="btn btn-primary" href="/departments-page">الإدارات</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Hero -->
+    <div class="page-hero">
+      <div class="hero-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2" />
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+        </svg>
+      </div>
+      <div>
+        <div class="hero-title">الإدارات</div>
+        <div class="hero-sub" id="deptSubtitle">جارٍ التحميل…</div>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <section class="kpi-grid" id="statsRow"></section>
+
+    <!-- Departments Grid -->
+    <div id="deptGrid" class="dept-grid">
+      <div class="loading-spinner" style="grid-column:1/-1">
+        <div class="spinner"></div>
+        جارٍ تحميل الإدارات…
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type} show`;
+      setTimeout(() => { t.className = 'toast'; }, 3000);
+    }
+
+    function deptShortName(raw) {
+      if (!raw) return '—';
+      const re = /all\s*departments\s*>\s*القوة\s*>/i;
+      if (re.test(raw)) return raw.replace(re, '').trim() || raw;
+      const idx = raw.indexOf('القوة>');
+      if (idx !== -1) return raw.slice(idx + 'القوة>'.length).trim() || raw;
+      return raw;
+    }
+
+    const DEPT_COLORS = [
+      { bg: 'var(--blue-dim)', icon: 'var(--blue)' },
+      { bg: 'var(--purple-dim)', icon: 'var(--purple)' },
+      { bg: 'var(--green-dim)', icon: 'var(--green)' },
+      { bg: 'var(--orange-dim)', icon: 'var(--orange)' },
+    ];
+
+    async function loadDepts() {
+      try {
+        const statsRes = await fetch('/stats');
+        const stats = await statsRes.json();
+
+        document.getElementById('deptSubtitle').textContent =
+          `${stats.department_count} إدارة – ${stats.total_employees} موظف`;
+
+        // Stats row
+        const statsRow = document.getElementById('statsRow');
+        statsRow.innerHTML = `
+          <div class="kpi-card">
+            <div class="kpi-icon kpi-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-label">إجمالي الموظفين</span>
+              <span class="kpi-value">${stats.total_employees}</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon kpi-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-label">موظفون نشطون</span>
+              <span class="kpi-value">${stats.active_employees}</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon kpi-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              </svg>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-label">عدد الإدارات</span>
+              <span class="kpi-value">${stats.department_count}</span>
+            </div>
+          </div>`;
+
+        // Dept breakdown
+        const breakdown = Array.isArray(stats.dept_breakdown) ? stats.dept_breakdown : [];
+        const grid = document.getElementById('deptGrid');
+        if (!breakdown.length) {
+          grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1">لا توجد إدارات بعد.</div>';
+          return;
+        }
+
+        grid.innerHTML = breakdown.map((d, i) => {
+          const color = DEPT_COLORS[i % DEPT_COLORS.length];
+          const short = deptShortName(d.dept);
+          const enc = encodeURIComponent(d.dept);
+          return `
+            <a class="dept-card" href="/department/${enc}" style="animation-delay:${i * 0.05}s">
+              <div class="dept-icon" style="background:${color.bg}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="${color.icon}" stroke-width="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2"/>
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                </svg>
+              </div>
+              <div class="dept-name">${short}</div>
+              <div class="dept-meta">
+                <span class="dept-count">${d.count}</span>
+                <span class="dept-count-label">موظف</span>
+              </div>
+              <div class="dept-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </div>
+            </a>`;
+        }).join('');
+      } catch (e) {
+        document.getElementById('deptGrid').innerHTML =
+          '<div class="loading-spinner" style="grid-column:1/-1">فشل تحميل البيانات.</div>';
+        showToast('فشل تحميل البيانات', 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDepts);
+  </script>
+</body>
+
+</html>

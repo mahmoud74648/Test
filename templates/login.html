@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول – HR System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body { font-family: 'Cairo', system-ui, sans-serif; }
+    .login-wrap { min-height: calc(100vh - 64px); display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .login-head {
+      padding: 22px 22px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .login-title { font-size: 18px; font-weight: 700; }
+    .login-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .login-body { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
+    .form-row { display: flex; flex-direction: column; gap: 6px; }
+    .form-row label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .form-row input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+      width: 100%;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-row input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,142,247,.18); }
+    .error {
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.25);
+      color: var(--red);
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+    .login-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; }
+    .muted-link { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+    .muted-link:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+          </svg>
+        </div>
+        <span class="brand-name">HR<span class="accent">System</span></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="login-wrap">
+    <div class="login-card">
+      <div class="login-head">
+        <div>
+          <div class="login-title">تسجيل الدخول</div>
+          <div class="login-sub">ادخل اسم المستخدم وكلمة المرور</div>
+        </div>
+      </div>
+      <div class="login-body">
+        {% if error %}
+          <div class="error">اسم المستخدم أو كلمة المرور غير صحيحة.</div>
+        {% endif %}
+        <form method="post" action="/login">
+          <input type="hidden" name="next" value="{{ next or '/dashboard' }}" />
+          <div class="form-row">
+            <label>اسم المستخدم</label>
+            <input name="username" autocomplete="username" required />
+          </div>
+          <div class="form-row">
+            <label>كلمة المرور</label>
+            <input name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="login-actions">
+            <button class="btn btn-primary" type="submit">دخول</button>
+            <a class="muted-link" href="/">العودة</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

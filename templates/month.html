@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة الشهر</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .day-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+      user-select: none;
+      min-height: 54px;
+    }
+
+    .day-card:hover {
+      border-color: #3a4060;
+      box-shadow: 0 0 32px rgba(79, 142, 247, .08);
+      transform: translateY(-1px);
+    }
+
+    .day-num {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -.2px;
+    }
+
+    .day-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      background: var(--surface2);
+      white-space: nowrap;
+    }
+
+    .day-pill.ok {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: rgba(45, 214, 123, .25);
+    }
+
+    .day-pill.miss {
+      background: var(--red-dim);
+      color: var(--red);
+      border-color: rgba(248, 113, 113, .25);
+    }
+
+    .day-card.today {
+      border-color: rgba(79, 142, 247, .6);
+      box-shadow: 0 0 0 3px rgba(79, 142, 247, .12);
+    }
+
+    .dow {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .dow div {
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <span class="brand-name">HR<span class="accent">System</span></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a class="btn btn-primary" href="/dashboard">الداشبورد</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="table-card">
+      <div class="table-header" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2 class="table-title">أيام شهر {{ year_month }}</h2>
+          <span class="badge" id="monthBadge">—</span>
+        </div>
+        <span class="badge" id="uploadedBadge">—</span>
+      </div>
+      <div style="padding:16px 20px 20px">
+        <div class="dow">
+          <div>Sat</div>
+          <div>Sun</div>
+          <div>Mon</div>
+          <div>Tue</div>
+          <div>Wed</div>
+          <div>Thu</div>
+          <div>Fri</div>
+        </div>
+        <div class="month-grid" id="monthGrid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const YEAR_MONTH = "{{ year_month }}";
+    const DAYS_IN_MONTH = Number("{{ days_in_month }}");
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function dateStr(day) { return `${YEAR_MONTH}-${pad2(day)}`; }
+    function toDOWIndex(dateText) {
+      const d = new Date(dateText + 'T00:00:00');
+      const js = d.getDay();
+      return (js + 1) % 7;
+    }
+
+    async function load() {
+      const [latest, status] = await Promise.all([
+        fetch('/latest-date').then(r => r.ok ? r.json() : ({ date: null })).catch(() => ({ date: null })),
+        fetch(`/calendar-status?month=${encodeURIComponent(YEAR_MONTH)}`).then(r => r.ok ? r.json() : ({ dates: [] })).catch(() => ({ dates: [] })),
+      ]);
+
+      const uploaded = new Set((status.dates || []).map(String));
+      document.getElementById('monthBadge').textContent = `${DAYS_IN_MONTH} يوم`;
+      document.getElementById('uploadedBadge').textContent = `${uploaded.size} يوم مرفوع`;
+
+      const grid = document.getElementById('monthGrid');
+      const first = dateStr(1);
+      const firstOffset = toDOWIndex(first);
+      for (let i = 0; i < firstOffset; i++) {
+        const spacer = document.createElement('div');
+        spacer.style.minHeight = '54px';
+        spacer.style.opacity = '0';
+        grid.appendChild(spacer);
+      }
+
+      for (let day = 1; day <= DAYS_IN_MONTH; day++) {
+        const dt = dateStr(day);
+        const has = uploaded.has(dt);
+
+        const el = document.createElement('div');
+        el.className = 'day-card' + (latest.date === dt ? ' today' : '');
+        el.innerHTML = `
+          <div class="day-num">${day}</div>
+          <div class="day-pill ${has ? 'ok' : 'miss'}">${has ? 'تم الرفع' : 'غير مرفوع'}</div>
+        `;
+        el.onclick = () => { window.location.href = `/upload?date=${encodeURIComponent(dt)}`; };
+        grid.appendChild(el);
+      }
+    }
+
+    load();
+  </script>
+</body>
+
+</html>
