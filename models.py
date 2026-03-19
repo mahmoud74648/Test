@@ -17,6 +17,8 @@ class Employee(Base):
     join_date  = Column(String)
     rests      = Column(Integer, default=0)
     status     = Column(String, default="active")   # active | inactive
+    leave_allowance_annual_days = Column(Float, default=0.0)
+    leave_allowance_casual_days = Column(Float, default=0.0)
 
     attendance_records = relationship(
         "AttendanceRecord",

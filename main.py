@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
+from sqlalchemy.exc import OperationalError
 from typing import Optional, List
 import calendar
 from datetime import date as dt_date
@@ -19,8 +20,17 @@ from import_excel import import_from_excel, import_from_excel_bytes
 
 # Create tables (new columns added)
 models.Base.metadata.create_all(bind=engine)
+def _ensure_employee_allowance_columns() -> None:
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(employees)").fetchall()}
+        if "leave_allowance_annual_days" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN leave_allowance_annual_days REAL DEFAULT 0.0")
+        if "leave_allowance_casual_days" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN leave_allowance_casual_days REAL DEFAULT 0.0")
 
-app = FastAPI(title="HR Management System", version="2.0")
+_ensure_employee_allowance_columns()
+
+app = FastAPI(title="HR Management System", version="2.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,6 +41,23 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+@app.get("/debug/info", include_in_schema=False)
+def debug_info():
+    with engine.connect() as conn:
+        cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(employees)").fetchall()]
+    employee_out_fields = list(getattr(schemas.EmployeeOut, "model_fields", getattr(schemas.EmployeeOut, "__fields__", {})).keys())
+    summary_out_fields = list(getattr(schemas.EmployeeSummaryOut, "model_fields", getattr(schemas.EmployeeSummaryOut, "__fields__", {})).keys())
+    return {
+        "app_version": getattr(app, "version", None),
+        "engine_url": str(getattr(engine, "url", "")),
+        "employees_table_has_leave_allowance_annual_days": "leave_allowance_annual_days" in cols,
+        "employees_table_has_leave_allowance_casual_days": "leave_allowance_casual_days" in cols,
+        "employee_out_has_leave_allowance_annual_days": "leave_allowance_annual_days" in employee_out_fields,
+        "employee_out_has_leave_allowance_casual_days": "leave_allowance_casual_days" in employee_out_fields,
+        "summary_out_has_leave_allowance_annual_days": "leave_allowance_annual_days" in summary_out_fields,
+        "summary_out_has_leave_allowance_casual_days": "leave_allowance_casual_days" in summary_out_fields,
+    }
 
 def _safe_next_url(next_url: Optional[str]) -> str:
     if not next_url:
@@ -229,7 +256,15 @@ def create_employee(payload: schemas.EmployeeCreate, db: Session = Depends(get_d
 
 @app.get("/employees/{emp_id}", response_model=schemas.EmployeeOut)
 def get_employee(emp_id: int, db: Session = Depends(get_db)):
-    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    try:
+        emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    except OperationalError as e:
+        msg = str(e).lower()
+        if "no such column" in msg and "leave_allowance" in msg:
+            _ensure_employee_allowance_columns()
+            emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+        else:
+            raise
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
     return emp
@@ -242,7 +277,16 @@ def update_employee(emp_id: int, payload: schemas.EmployeeUpdate, db: Session = 
         raise HTTPException(status_code=404, detail="Employee not found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(emp, field, value)
-    db.commit()
+    try:
+        db.commit()
+    except OperationalError as e:
+        db.rollback()
+        msg = str(e).lower()
+        if "no such column" in msg and "leave_allowance" in msg:
+            _ensure_employee_allowance_columns()
+            db.commit()
+        else:
+            raise
     db.refresh(emp)
     return emp
 
@@ -485,7 +529,15 @@ def employee_page(emp_id: int, request: Request):
 # ── Employee Summary ───────────────────────────────────────────────────────────
 @app.get("/employees/{emp_id}/summary", response_model=schemas.EmployeeSummaryOut)
 def employee_summary(emp_id: int, db: Session = Depends(get_db)):
-    emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    try:
+        emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+    except OperationalError as e:
+        msg = str(e).lower()
+        if "no such column" in msg and "leave_allowance" in msg:
+            _ensure_employee_allowance_columns()
+            emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
+        else:
+            raise
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
 
@@ -494,6 +546,15 @@ def employee_summary(emp_id: int, db: Session = Depends(get_db)):
     total_hours   = sum(p.hours for p in emp.permissions)
     total_deduct_d  = sum(d.amount for d in emp.deductions if d.deduction_type == "days")
     total_deduct_m  = sum(d.amount for d in emp.deductions if d.deduction_type == "money")
+    allowance_annual = float(getattr(emp, "leave_allowance_annual_days", 0.0) or 0.0)
+    allowance_casual = float(getattr(emp, "leave_allowance_casual_days", 0.0) or 0.0)
+    annual_used = float(total_annual or 0.0)
+    casual_used = float(total_casual or 0.0)
+    annual_remaining = max(0.0, allowance_annual - annual_used)
+    casual_remaining = max(0.0, allowance_casual - casual_used)
+    total_used = annual_used + casual_used
+    remaining_before_deduct = annual_remaining + casual_remaining
+    remaining = max(0.0, remaining_before_deduct - float(total_deduct_d or 0.0))
 
     return schemas.EmployeeSummaryOut(
         id=emp.id,
@@ -502,11 +563,17 @@ def employee_summary(emp_id: int, db: Session = Depends(get_db)):
         dept=emp.dept,
         job_title=emp.job_title,
         status=emp.status,
+        leave_allowance_annual_days=allowance_annual,
+        leave_allowance_casual_days=allowance_casual,
         total_annual_leave=total_annual,
         total_casual_leave=total_casual,
+        total_leave_used_days=total_used,
         total_permission_hours=total_hours,
         total_deduction_days=total_deduct_d,
         total_deduction_money=total_deduct_m,
+        annual_leave_remaining_days=annual_remaining,
+        casual_leave_remaining_days=casual_remaining,
+        leave_remaining_days=remaining,
     )
 
 
@@ -528,6 +595,15 @@ def dept_employees(dept_name: str, db: Session = Depends(get_db)):
         total_hours  = sum(p.hours for p in emp.permissions)
         total_deduct_d  = sum(d.amount for d in emp.deductions if d.deduction_type == "days")
         total_deduct_m  = sum(d.amount for d in emp.deductions if d.deduction_type == "money")
+        allowance_annual = float(getattr(emp, "leave_allowance_annual_days", 0.0) or 0.0)
+        allowance_casual = float(getattr(emp, "leave_allowance_casual_days", 0.0) or 0.0)
+        annual_used = float(total_annual or 0.0)
+        casual_used = float(total_casual or 0.0)
+        annual_remaining = max(0.0, allowance_annual - annual_used)
+        casual_remaining = max(0.0, allowance_casual - casual_used)
+        total_used = annual_used + casual_used
+        remaining_before_deduct = annual_remaining + casual_remaining
+        remaining = max(0.0, remaining_before_deduct - float(total_deduct_d or 0.0))
         result.append(schemas.EmployeeSummaryOut(
             id=emp.id,
             employee_code=emp.employee_code,
@@ -535,11 +611,17 @@ def dept_employees(dept_name: str, db: Session = Depends(get_db)):
             dept=emp.dept,
             job_title=emp.job_title,
             status=emp.status,
+            leave_allowance_annual_days=allowance_annual,
+            leave_allowance_casual_days=allowance_casual,
             total_annual_leave=total_annual,
             total_casual_leave=total_casual,
+            total_leave_used_days=total_used,
             total_permission_hours=total_hours,
             total_deduction_days=total_deduct_d,
             total_deduction_money=total_deduct_m,
+            annual_leave_remaining_days=annual_remaining,
+            casual_leave_remaining_days=casual_remaining,
+            leave_remaining_days=remaining,
         ))
     return result
 
@@ -588,6 +670,27 @@ def add_permission(emp_id: int, payload: schemas.PermissionCreate, db: Session =
     emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
+    ym = (payload.date or "")[:7]
+    if len(ym) != 7 or ym[4] != "-":
+        raise HTTPException(status_code=400, detail="صيغة التاريخ غير صحيحة (YYYY-MM-DD)")
+    month_total = (
+        db.query(func.coalesce(func.sum(models.Permission.hours), 0.0))
+        .filter(models.Permission.employee_id == emp_id)
+        .filter(models.Permission.date.like(f"{ym}%"))
+        .scalar()
+    )
+    month_total = float(month_total or 0.0)
+    hours = float(payload.hours or 0.0)
+    if hours <= 0:
+        raise HTTPException(status_code=400, detail="عدد الساعات يجب أن يكون أكبر من صفر")
+    if month_total + hours > 4:
+        remaining = max(0.0, 4.0 - month_total)
+        r_txt = str(int(remaining)) if remaining % 1 == 0 else f"{remaining:.1f}"
+        t_txt = str(int(month_total)) if month_total % 1 == 0 else f"{month_total:.1f}"
+        raise HTTPException(
+            status_code=400,
+            detail=f"لا يمكن إضافة الإذن: تم استخدام {t_txt} ساعة هذا الشهر، والمتبقي {r_txt} ساعة فقط (الحد الأقصى 4 ساعات).",
+        )
     from datetime import datetime as _dt
     perm = models.Permission(
         employee_id=emp_id,
@@ -628,7 +731,7 @@ def add_deduction(emp_id: int, payload: schemas.DeductionCreate, db: Session = D
     from datetime import datetime as _dt
     ded = models.Deduction(
         employee_id=emp_id,
-        deduction_type=payload.deduction_type,
+        deduction_type="days",
         amount=payload.amount,
         reason=payload.reason or "",
         date=payload.date,

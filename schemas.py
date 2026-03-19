@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 class EmployeeBase(BaseModel):
     employee_code: Optional[str] = None
@@ -12,6 +12,8 @@ class EmployeeBase(BaseModel):
     join_date: Optional[str] = None
     rests:     Optional[int] = 0
     status:    Optional[str] = "active"
+    leave_allowance_annual_days: Optional[float] = 0.0
+    leave_allowance_casual_days: Optional[float] = 0.0
 
 class EmployeeCreate(EmployeeBase):
     pass
@@ -27,6 +29,8 @@ class EmployeeUpdate(BaseModel):
     join_date: Optional[str] = None
     rests:     Optional[int] = None
     status:    Optional[str] = None
+    leave_allowance_annual_days: Optional[float] = None
+    leave_allowance_casual_days: Optional[float] = None
 
 class EmployeeOut(EmployeeBase):
     id: int
@@ -161,7 +165,7 @@ class PermissionOut(PermissionCreate):
 
 # ── Manual Deduction ───────────────────────────────────────────────────────────
 class DeductionCreate(BaseModel):
-    deduction_type: str = "money"   # "days" | "money"
+    deduction_type: Literal["days"] = "days"
     amount: float
     reason: Optional[str] = ""
     date: str
@@ -182,8 +186,14 @@ class EmployeeSummaryOut(BaseModel):
     dept: str
     job_title: Optional[str] = None
     status: Optional[str] = None
+    leave_allowance_annual_days: float = 0.0
+    leave_allowance_casual_days: float = 0.0
     total_annual_leave: float = 0.0
     total_casual_leave: float = 0.0
+    total_leave_used_days: float = 0.0
     total_permission_hours: float = 0.0
     total_deduction_days: float = 0.0
     total_deduction_money: float = 0.0
+    annual_leave_remaining_days: float = 0.0
+    casual_leave_remaining_days: float = 0.0
+    leave_remaining_days: float = 0.0

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>الإدارات – HR System</title>
+  <title>الإدارات – نظام الموارد البشرية</title>
   <meta name="description" content="عرض جميع الإدارات وموظفيها" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -12,6 +12,10 @@
   <style>
     body {
       font-family: 'Cairo', system-ui, sans-serif;
+      background:
+        radial-gradient(900px 550px at 80% 0%, rgba(79, 142, 247, .12), transparent 60%),
+        radial-gradient(850px 520px at 10% 25%, rgba(155, 89, 182, .12), transparent 55%),
+        linear-gradient(180deg, #0a1020 0%, #070b14 70%, #060910 100%);
     }
 
     .table-wrap table {
@@ -31,12 +35,12 @@
     .dept-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
+      gap: 16px;
       margin-top: 0;
     }
 
     .dept-card {
-      background: var(--surface);
+      background: linear-gradient(135deg, rgba(20, 23, 32, .92), rgba(28, 32, 48, .75));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 24px;
@@ -60,6 +64,17 @@
       border-radius: 0 var(--radius) var(--radius) 0;
     }
 
+    .dept-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(520px 260px at 20% 0%, rgba(79,142,247,.10), transparent 55%),
+        radial-gradient(520px 260px at 100% 40%, rgba(167,139,250,.08), transparent 55%);
+      pointer-events: none;
+      opacity: .9;
+    }
+
     .dept-card:hover {
       border-color: var(--blue);
       box-shadow: 0 0 32px rgba(79, 142, 247, .15);
@@ -75,6 +90,8 @@
       align-items: center;
       justify-content: center;
       margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
     }
 
     .dept-icon svg {
@@ -83,36 +100,67 @@
       color: var(--blue);
     }
 
+    .dept-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
     .dept-name {
       font-size: 15px;
       font-weight: 700;
       color: var(--text);
       margin-bottom: 8px;
       line-height: 1.4;
+      flex: 1;
     }
 
-    .dept-meta {
-      display: flex;
+    .dept-pill {
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,16,32,.55);
+      color: rgba(255,255,255,.88);
+      font-weight: 800;
+      font-size: 12px;
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
     }
 
-    .dept-count {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--blue);
-      letter-spacing: -1px;
+    .dept-pill .num {
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      unicode-bidi: plaintext;
     }
 
-    .dept-count-label {
+    .dept-pill-label {
       font-size: 12px;
       color: var(--text-muted);
     }
 
+    .dept-foot {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .dept-hint {
+      color: rgba(255,255,255,.58);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
     .dept-arrow {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
       color: var(--text-muted);
       transition: color .2s, transform .2s;
     }
@@ -128,14 +176,65 @@
     }
 
     .page-hero {
-      background: linear-gradient(135deg, #141a2e 0%, #1a1f3a 60%, #0f1628 100%);
+      background: linear-gradient(135deg, rgba(79, 142, 247, .14), rgba(155, 89, 182, .12));
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 28px 32px;
       display: flex;
       align-items: center;
-      gap: 20px;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
     }
+
+    .page-hero::before {
+      content: "";
+      position: absolute;
+      inset: -140px -230px auto auto;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle at 30% 30%, rgba(79, 142, 247, .42), rgba(79, 142, 247, 0) 65%);
+      opacity: .45;
+      transform: rotate(12deg);
+      pointer-events: none;
+    }
+
+    .hero-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(10, 16, 32, .62);
+      border: 1px solid rgba(255, 255, 255, .12);
+      color: rgba(255,255,255,.85);
+      font-size: 12px;
+      font-weight: 800;
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+
+    .mini-badge svg { width: 16px; height: 16px; }
+    .mini-badge .num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: plaintext; }
 
     .hero-icon {
       width: 64px;
@@ -162,8 +261,19 @@
 
     .hero-sub {
       font-size: 13px;
-      color: var(--text-muted);
+      color: rgba(255,255,255,.78);
     }
+
+    .dept-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .dept-toolbar .search-wrap { flex: 1 1 280px; max-width: 420px; }
+    .dept-toolbar .right-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
     .loading-spinner {
       display: flex;
@@ -204,11 +314,14 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
         </div>
-        <span class="brand-name">HR<span class="accent">System</span></span>
+        <span class="brand-name">نظام <span class="accent">الموارد</span></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center">
-        <a class="btn btn-ghost" href="/">الرئيسية</a>
+        <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-ghost" href="/upload">رفع ملف</a>
+        <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
         <a class="btn btn-primary" href="/departments-page">الإدارات</a>
+        <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
     </div>
   </header>
@@ -216,15 +329,42 @@
   <main class="main">
     <!-- Hero -->
     <div class="page-hero">
-      <div class="hero-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="7" width="20" height="14" rx="2" />
-          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-        </svg>
+      <div class="hero-left">
+        <div class="hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+          </svg>
+        </div>
+        <div>
+          <div class="hero-title">الإدارات</div>
+          <div class="hero-sub" id="deptSubtitle">جارٍ التحميل…</div>
+        </div>
       </div>
-      <div>
-        <div class="hero-title">الإدارات</div>
-        <div class="hero-sub" id="deptSubtitle">جارٍ التحميل…</div>
+      <div class="hero-right">
+        <span class="mini-badge" title="عدد الإدارات">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          </svg>
+          <span class="num" id="heroDeptCount">—</span>
+        </span>
+        <span class="mini-badge" title="إجمالي الموظفين (القوة)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span class="num" id="heroTotal">—</span>
+        </span>
+        <span class="mini-badge" title="نشطون (القوة)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span class="num" id="heroActive">—</span>
+        </span>
+        <button class="btn btn-ghost" type="button" onclick="loadDepts()">تحديث</button>
       </div>
     </div>
 
@@ -232,6 +372,21 @@
     <section class="kpi-grid" id="statsRow"></section>
 
     <!-- Departments Grid -->
+    <section class="dept-toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="deptSearch" class="search-input" placeholder="بحث باسم الإدارة…" oninput="filterDepts()" />
+      </div>
+      <div class="right-tools">
+        <select id="deptSort" class="select-filter" onchange="applyView()" style="min-width: 190px">
+          <option value="count_desc">الأكثر موظفين</option>
+          <option value="name_asc">الاسم (أ-ي)</option>
+        </select>
+        <span class="badge" id="deptShown">—</span>
+      </div>
+    </section>
     <div id="deptGrid" class="dept-grid">
       <div class="loading-spinner" style="grid-column:1/-1">
         <div class="spinner"></div>
@@ -254,8 +409,8 @@
       if (!raw) return '—';
       const re = /all\s*departments\s*>\s*القوة\s*>/i;
       if (re.test(raw)) return raw.replace(re, '').trim() || raw;
-      const idx = raw.indexOf('القوة>');
-      if (idx !== -1) return raw.slice(idx + 'القوة>'.length).trim() || raw;
+      const m = String(raw).match(/القوة\s*>/);
+      if (m && m.index != null) return String(raw).slice(m.index + m[0].length).trim() || raw;
       return raw;
     }
 
@@ -266,13 +421,78 @@
       { bg: 'var(--orange-dim)', icon: 'var(--orange)' },
     ];
 
+    let deptBreakdown = [];
+
+    function renderDepts(list) {
+      const grid = document.getElementById('deptGrid');
+      const shown = document.getElementById('deptShown');
+      shown.textContent = `${list.length} من ${deptBreakdown.length}`;
+
+      if (!list.length) {
+        grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1">لا توجد نتائج.</div>';
+        return;
+      }
+
+      grid.innerHTML = list.map((d, i) => {
+        const color = DEPT_COLORS[i % DEPT_COLORS.length];
+        const short = deptShortName(d.dept);
+        const enc = encodeURIComponent(d.dept);
+        const count = Number(d.count || 0);
+        return `
+          <a class="dept-card" href="/department/${enc}" style="animation-delay:${i * 0.04}s">
+            <div class="dept-icon" style="background:${color.bg}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="${color.icon}" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              </svg>
+            </div>
+            <div class="dept-head">
+              <div class="dept-name">${short}</div>
+              <span class="dept-pill" title="عدد الموظفين">
+                <span class="num">${count.toLocaleString()}</span>
+                <span class="dept-pill-label">موظف</span>
+              </span>
+            </div>
+            <div class="dept-foot">
+              <span class="dept-hint">فتح تفاصيل الإدارة</span>
+              <span class="dept-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </span>
+            </div>
+          </a>`;
+      }).join('');
+    }
+
+    function filterDepts() {
+      const q = (document.getElementById('deptSearch')?.value || '').trim().toLowerCase();
+      if (!q) { return deptBreakdown.slice(); }
+      return deptBreakdown.filter(d => deptShortName(d.dept).toLowerCase().includes(q));
+    }
+
+    function applyView() {
+      const sort = document.getElementById('deptSort')?.value || 'count_desc';
+      const list = filterDepts();
+      if (sort === 'name_asc') {
+        list.sort((a, b) => deptShortName(a.dept).localeCompare(deptShortName(b.dept), 'ar'));
+      } else {
+        list.sort((a, b) => Number(b.count || 0) - Number(a.count || 0));
+      }
+      renderDepts(list);
+    }
+
     async function loadDepts() {
       try {
         const statsRes = await fetch('/stats');
         const stats = await statsRes.json();
 
+        document.getElementById('heroDeptCount').textContent = Number(stats.department_count || 0).toLocaleString();
+        document.getElementById('heroTotal').textContent = Number(stats.total_employees || 0).toLocaleString();
+        document.getElementById('heroActive').textContent = Number(stats.active_employees || 0).toLocaleString();
+
         document.getElementById('deptSubtitle').textContent =
-          `${stats.department_count} إدارة – ${stats.total_employees} موظف`;
+          `استعراض الإدارات + أعداد الموظفين (القوة)`;
 
         // Stats row
         const statsRow = document.getElementById('statsRow');
@@ -285,8 +505,8 @@
               </svg>
             </div>
             <div class="kpi-body">
-              <span class="kpi-label">إجمالي الموظفين</span>
-              <span class="kpi-value">${stats.total_employees}</span>
+              <span class="kpi-label">إجمالي الموظفين (القوة)</span>
+              <span class="kpi-value" dir="ltr">${Number(stats.total_employees || 0).toLocaleString()}</span>
             </div>
           </div>
           <div class="kpi-card">
@@ -296,8 +516,8 @@
               </svg>
             </div>
             <div class="kpi-body">
-              <span class="kpi-label">موظفون نشطون</span>
-              <span class="kpi-value">${stats.active_employees}</span>
+              <span class="kpi-label">موظفون نشطون (القوة)</span>
+              <span class="kpi-value" dir="ltr">${Number(stats.active_employees || 0).toLocaleString()}</span>
             </div>
           </div>
           <div class="kpi-card">
@@ -309,42 +529,13 @@
             </div>
             <div class="kpi-body">
               <span class="kpi-label">عدد الإدارات</span>
-              <span class="kpi-value">${stats.department_count}</span>
+              <span class="kpi-value" dir="ltr">${Number(stats.department_count || 0).toLocaleString()}</span>
             </div>
           </div>`;
 
         // Dept breakdown
-        const breakdown = Array.isArray(stats.dept_breakdown) ? stats.dept_breakdown : [];
-        const grid = document.getElementById('deptGrid');
-        if (!breakdown.length) {
-          grid.innerHTML = '<div class="loading-spinner" style="grid-column:1/-1">لا توجد إدارات بعد.</div>';
-          return;
-        }
-
-        grid.innerHTML = breakdown.map((d, i) => {
-          const color = DEPT_COLORS[i % DEPT_COLORS.length];
-          const short = deptShortName(d.dept);
-          const enc = encodeURIComponent(d.dept);
-          return `
-            <a class="dept-card" href="/department/${enc}" style="animation-delay:${i * 0.05}s">
-              <div class="dept-icon" style="background:${color.bg}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="${color.icon}" stroke-width="2">
-                  <rect x="2" y="7" width="20" height="14" rx="2"/>
-                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-                </svg>
-              </div>
-              <div class="dept-name">${short}</div>
-              <div class="dept-meta">
-                <span class="dept-count">${d.count}</span>
-                <span class="dept-count-label">موظف</span>
-              </div>
-              <div class="dept-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-              </div>
-            </a>`;
-        }).join('');
+        deptBreakdown = Array.isArray(stats.dept_breakdown) ? stats.dept_breakdown : [];
+        applyView();
       } catch (e) {
         document.getElementById('deptGrid').innerHTML =
           '<div class="loading-spinner" style="grid-column:1/-1">فشل تحميل البيانات.</div>';

@@ -26,7 +26,7 @@
 /* ── Reset ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Cairo', 'Inter', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -49,8 +49,8 @@ body {
   padding: 0 24px;
   height: 64px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-icon {
@@ -136,7 +136,7 @@ body {
 .kpi-purple { background: var(--purple-dim); color: var(--purple); }
 .kpi-orange { background: var(--orange-dim); color: var(--orange); }
 .kpi-body   { display: flex; flex-direction: column; gap: 3px; }
-.kpi-label  { font-size: 12px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; }
+.kpi-label  { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .kpi-value  { font-size: 28px; font-weight: 700; letter-spacing: -.5px; line-height: 1; }
 
 /* ── Toolbar ───────────────────────────────────────────────────────────────── */
@@ -165,6 +165,31 @@ body {
   transition: border-color var(--transition);
 }
 .select-filter:focus { border-color: var(--blue); }
+
+[dir="rtl"] .search-icon {
+  left: auto;
+  right: 12px;
+}
+
+[dir="rtl"] .search-input {
+  padding: 9px 38px 9px 12px;
+}
+
+[dir="rtl"] .select-filter {
+  padding: 9px 12px 9px 36px;
+  background-position: left 10px center;
+}
+
+[dir="rtl"] thead th {
+  text-align: right;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+[dir="rtl"] .form-group label {
+  text-transform: none;
+  letter-spacing: 0;
+}
 
 /* ── Table Card ────────────────────────────────────────────────────────────── */
 .table-card {

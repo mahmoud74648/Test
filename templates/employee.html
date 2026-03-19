@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>بروفايل الموظف – HR System</title>
+  <title>ملف الموظف – نظام الموارد البشرية</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
@@ -61,6 +61,31 @@
     .back-link:hover { color: var(--blue); }
     .back-link svg { width: 16px; height: 16px; }
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
+    .balance-card {
+      background: linear-gradient(135deg, rgba(79, 142, 247, .10), rgba(155, 89, 182, .08));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .balance-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: rgba(255,255,255,.92); }
+    .balance-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+    .balance-field { display: flex; flex-direction: column; gap: 6px; }
+    .balance-field label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.72); }
+    .balance-field input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+    .balance-save { align-self: end; white-space: nowrap; }
+    @media (max-width: 900px) {
+      .balance-grid { grid-template-columns: 1fr; }
+      .balance-save { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -73,11 +98,14 @@
             <circle cx="9" cy="7" r="4"/>
           </svg>
         </div>
-        <span class="brand-name">HR<span class="accent">System</span></span>
+        <span class="brand-name">نظام <span class="accent">الموارد</span></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center">
-        <a class="btn btn-ghost" href="/">الرئيسية</a>
-        <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
+        <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-ghost" href="/upload">رفع ملف</a>
+        <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-primary" href="/departments-page">الإدارات</a>
+        <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
     </div>
   </header>
@@ -102,6 +130,21 @@
 
     <!-- KPI Row -->
     <section class="kpi-grid" id="kpiRow"></section>
+
+    <section class="balance-card" id="balanceCard">
+      <div class="balance-title">رصيد الإجازات (إدخال يدوي لكل موظف)</div>
+      <div class="balance-grid">
+        <div class="balance-field">
+          <label>رصيد سنوية (يوم)</label>
+          <input type="number" id="allowAnnual" min="0" step="0.5" value="0" />
+        </div>
+        <div class="balance-field">
+          <label>رصيد عارضة (يوم)</label>
+          <input type="number" id="allowCasual" min="0" step="0.5" value="0" />
+        </div>
+        <button class="btn btn-primary balance-save" onclick="saveLeaveBalances()">حفظ الرصيد</button>
+      </div>
+    </section>
 
     <!-- Tab Bar + History -->
     <section class="table-card">
@@ -176,25 +219,59 @@
           </div>`;
 
         const fmt = v => (Number(v||0)%1===0)?Number(v||0):(Number(v||0)).toFixed(1);
+        document.getElementById('allowAnnual').value = fmt(emp.leave_allowance_annual_days || 0);
+        document.getElementById('allowCasual').value = fmt(emp.leave_allowance_casual_days || 0);
         document.getElementById('kpiRow').innerHTML = `
           <div class="kpi-card"><div class="kpi-icon kpi-green">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">إجازة سنوية (أيام)</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.total_annual_leave)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">رصيد سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.leave_allowance_annual_days)}</span></div></div>
+          <div class="kpi-card"><div class="kpi-icon kpi-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><path d="M12 3v18"/></svg>
+            </div><div class="kpi-body"><span class="kpi-label">مستخدم سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.total_annual_leave)}</span></div></div>
+          <div class="kpi-card"><div class="kpi-icon kpi-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            </div><div class="kpi-body"><span class="kpi-label">المتبقي سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.annual_leave_remaining_days)}</span></div></div>
+
           <div class="kpi-card"><div class="kpi-icon kpi-blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">إجازة عارضة (أيام)</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.total_casual_leave)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">رصيد عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.leave_allowance_casual_days)}</span></div></div>
+          <div class="kpi-card"><div class="kpi-icon kpi-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><path d="M12 3v18"/></svg>
+            </div><div class="kpi-body"><span class="kpi-label">مستخدم عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.total_casual_leave)}</span></div></div>
+          <div class="kpi-card"><div class="kpi-icon kpi-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            </div><div class="kpi-body"><span class="kpi-label">المتبقي عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.casual_leave_remaining_days)}</span></div></div>
+
           <div class="kpi-card"><div class="kpi-icon kpi-orange">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div><div class="kpi-body"><span class="kpi-label">ساعات إذن</span><span class="kpi-value" style="color:var(--orange)">${fmt(emp.total_permission_hours)}</span></div></div>
-          <div class="kpi-card"><div class="kpi-icon" style="background:var(--red-dim);color:var(--red)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">خصومات (أيام)</span><span class="kpi-value" style="color:var(--red)">${fmt(emp.total_deduction_days)}</span></div></div>
-          <div class="kpi-card"><div class="kpi-icon" style="background:var(--red-dim);color:var(--red)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">خصومات (جنيه)</span><span class="kpi-value" style="color:var(--red)">${Number(emp.total_deduction_money||0).toLocaleString()}</span></div></div>`;
+          <div class="kpi-card"><div class="kpi-icon kpi-red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><rect x="6" y="6" width="12" height="16" rx="2"/></svg>
+            </div><div class="kpi-body"><span class="kpi-label">خصم (أيام)</span><span class="kpi-value" style="color:var(--red)">${fmt(emp.total_deduction_days)}</span></div></div>
+          <div class="kpi-card"><div class="kpi-icon kpi-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div><div class="kpi-body"><span class="kpi-label">المتبقي النهائي</span><span class="kpi-value" style="color:var(--purple)">${fmt(emp.leave_remaining_days)}</span></div></div>`;
       } catch {
         showToast('فشل تحميل بيانات الموظف','error');
       }
+    }
+
+    async function saveLeaveBalances() {
+      const a = Number(document.getElementById('allowAnnual').value);
+      const c = Number(document.getElementById('allowCasual').value);
+      if (!Number.isFinite(a) || a < 0 || !Number.isFinite(c) || c < 0) { showToast('ادخل أرقام صحيحة للرصيد','error'); return; }
+      const r = await fetch(`/employees/${empId}`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ leave_allowance_annual_days: a, leave_allowance_casual_days: c })
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
+      showToast('تم حفظ الرصيد ✓');
+      await loadProfile();
     }
 
     async function loadHistory() {
@@ -256,13 +333,13 @@
             <td><button class="delete-btn" onclick="deleteRecord('perm',${p.id})" title="حذف">${trashIco}</button></td>
           </tr>`).join('')}</tbody></table>`;
       } else {
-        document.getElementById('histCount').textContent = deductsData.length;
-        if (!deductsData.length) { container.innerHTML='<div class="empty-state">لا توجد خصومات مسجلة.</div>'; return; }
+        const daysOnly = deductsData.filter(d => d.deduction_type === 'days');
+        document.getElementById('histCount').textContent = daysOnly.length;
+        if (!daysOnly.length) { container.innerHTML='<div class="empty-state">لا توجد خصومات مسجلة.</div>'; return; }
         container.innerHTML = `<table class="history-table">
-          <thead><tr><th>النوع</th><th>القيمة</th><th>التاريخ</th><th>السبب</th><th></th></tr></thead>
-          <tbody>${deductsData.map(d=>`<tr>
-            <td><span class="type-pill" style="background:var(--surface2);color:var(--text)">${d.deduction_type==='days'?'أيام':'مبلغ مالي'}</span></td>
-            <td><span class="type-pill" style="background:var(--red-dim);color:var(--red)">${d.deduction_type==='days' ? (d.amount%1===0?d.amount:d.amount.toFixed(1)) + ' يوم' : Number(d.amount).toLocaleString() + ' ج'}</span></td>
+          <thead><tr><th>أيام الخصم</th><th>التاريخ</th><th>السبب</th><th></th></tr></thead>
+          <tbody>${daysOnly.map(d=>`<tr>
+            <td><span class="type-pill" style="background:var(--red-dim);color:var(--red)">${d.amount%1===0?d.amount:d.amount.toFixed(1)} يوم</span></td>
             <td>${d.date}</td><td>${d.reason||'—'}</td>
             <td><button class="delete-btn" onclick="deleteRecord('deduct',${d.id})" title="حذف">${trashIco}</button></td>
           </tr>`).join('')}</tbody></table>`;

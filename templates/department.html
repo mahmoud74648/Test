@@ -3,12 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>الإدارة – HR System</title>
+  <title>الإدارة – نظام الموارد البشرية</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
   <style>
     body { font-family: 'Cairo', system-ui, sans-serif; }
+    body {
+      background:
+        radial-gradient(900px 550px at 80% 0%, rgba(79, 142, 247, .12), transparent 60%),
+        radial-gradient(850px 520px at 10% 25%, rgba(155, 89, 182, .12), transparent 55%),
+        linear-gradient(180deg, #0a1020 0%, #070b14 70%, #060910 100%);
+    }
     .table-wrap table { direction: rtl; }
     .table-wrap thead th { text-align: right; text-transform: none; letter-spacing: 0; }
     .table-wrap tbody td { text-align: right; }
@@ -16,11 +22,69 @@
     .table-wrap tbody td[style*="text-align:center"] { text-align: center !important; }
     .table-wrap thead th:last-child { text-align: left; }
     .table-wrap tbody td:last-child { text-align: left; }
+    .table-wrap {
+      border-radius: var(--radius);
+      overflow: auto;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(10, 16, 32, .35);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .table-wrap table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .table-wrap thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: rgba(10, 16, 32, .82);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      padding: 14px 16px;
+      font-size: 12px;
+      font-weight: 900;
+      color: rgba(255,255,255,.80);
+      white-space: nowrap;
+    }
+    .table-wrap tbody tr { height: 72px; }
+    .table-wrap tbody td {
+      padding: 5px 5px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 13px;
+      /* line-height: 1.55; */
+      vertical-align: middle;
+      background: rgba(10, 16, 32, .10);
+    }
+    .table-wrap tbody tr:nth-child(odd) td {
+      background: rgba(10, 16, 32, .18);
+    }
+    .table-wrap tbody tr:hover td {
+      background: rgba(79,142,247,.10);
+    }
+    .table-wrap tbody tr:last-child td { border-bottom: none; }
+    #empTable thead th:first-child { border-top-right-radius: var(--radius); }
+    #empTable thead th:last-child { border-top-left-radius: var(--radius); }
     .page-hero {
-      background: linear-gradient(135deg, #141a2e 0%, #1a1f3a 60%, #0f1628 100%);
+      background: linear-gradient(135deg, rgba(79, 142, 247, .14), rgba(155, 89, 182, .12));
       border: 1px solid var(--border); border-radius: var(--radius);
       padding: 24px 28px; display: flex; align-items: center;
       justify-content: space-between; gap: 20px; flex-wrap: wrap;
+      justify-content: space-between; gap: 20px; flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::before {
+      content: "";
+      position: absolute;
+      inset: -140px -230px auto auto;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle at 30% 30%, rgba(79, 142, 247, .42), rgba(79, 142, 247, 0) 65%);
+      opacity: .45;
+      transform: rotate(12deg);
+      pointer-events: none;
     }
     .hero-left { display: flex; align-items: center; gap: 16px; }
     .hero-icon {
@@ -30,10 +94,33 @@
     }
     .hero-icon svg { width: 26px; height: 26px; color: #fff; }
     .hero-title { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
-    .hero-sub { font-size: 13px; color: var(--text-muted); }
+    .hero-sub { font-size: 13px; color: rgba(255,255,255,.78); }
+    .hero-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(10, 16, 32, .62);
+      border: 1px solid rgba(255, 255, 255, .12);
+      color: rgba(255,255,255,.85);
+      font-size: 12px;
+      font-weight: 800;
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+    .mini-badge svg { width: 16px; height: 16px; }
     .action-btn {
       display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      padding: 10px 14px; border-radius: 12px; font-size: 12px; font-weight: 900;
       border: none; cursor: pointer; transition: all .18s; white-space: nowrap;
       font-family: inherit;
     }
@@ -46,10 +133,10 @@
     .btn-perm:hover    { background: #4a2600; }
     .btn-deduct  { background: var(--red-dim);    color: var(--red); }
     .btn-deduct:hover  { background: #4a1010; }
-    .actions-cell { display: flex; flex-wrap: wrap; gap: 5px; }
+    .actions-cell { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
     .num-pill {
       display: inline-block; min-width: 36px; text-align: center;
-      padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 12px;
+      padding: 6px 10px; border-radius: 10px; font-weight: 700; font-size: 12px;
     }
     .num-green  { background: var(--green-dim);  color: var(--green); }
     .num-blue   { background: var(--blue-dim);   color: var(--blue); }
@@ -59,14 +146,14 @@
     .emp-name-link { color: var(--blue); text-decoration: none; font-weight: 600; }
     .emp-name-link:hover { text-decoration: underline; }
     .form-row { display: flex; flex-direction: column; gap: 5px; }
-    .form-row label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing:.05em; }
-    .form-row input, .form-row textarea {
+    .form-row label { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.78); text-transform: none; letter-spacing:0; }
+    .form-row input, .form-row textarea, .form-row select {
       background: var(--surface2); border: 1px solid var(--border);
       border-radius: var(--radius-sm); color: var(--text);
       padding: 9px 12px; font-size: 13px; outline: none; font-family: inherit; width: 100%;
       transition: border-color .2s, box-shadow .2s;
     }
-    .form-row input:focus, .form-row textarea:focus {
+    .form-row input:focus, .form-row textarea:focus, .form-row select:focus {
       border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,142,247,.18);
     }
     .form-body { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
@@ -76,6 +163,48 @@
     }
     .back-link:hover { color: var(--blue); }
     .back-link svg { width: 16px; height: 16px; }
+    #empTable thead th:nth-child(1),
+    #empTable tbody td:nth-child(1) { text-align: center; }
+    #empTable tbody td:nth-child(1),
+    #empTable tbody td:nth-child(4),
+    #empTable tbody td:nth-child(5),
+    #empTable tbody td:nth-child(6),
+    #empTable tbody td:nth-child(7) { font-variant-numeric: tabular-nums; }
+    #empTable tbody td:nth-child(4),
+    #empTable tbody td:nth-child(5),
+    #empTable tbody td:nth-child(6),
+    #empTable tbody td:nth-child(7) { direction: ltr; unicode-bidi: plaintext; }
+    #empTable thead th:nth-child(1) { width: 84px; }
+    #empTable thead th:nth-child(2) { width: 220px; }
+    #empTable thead th:nth-child(3) { width: 20px; }
+    #empTable thead th:nth-child(4),
+    #empTable thead th:nth-child(5),
+    #empTable thead th:nth-child(6),
+    #empTable thead th:nth-child(7) { width: 92px; }
+    #empTable thead th:nth-child(8) { width: 260px; }
+    #empTable thead th:nth-child(4),
+    #empTable thead th:nth-child(5),
+    #empTable thead th:nth-child(6),
+    #empTable thead th:nth-child(7) {
+      white-space: normal;
+      line-height: 1.2;
+      font-size: 11px;
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    #empTable tbody td:nth-child(4),
+    #empTable tbody td:nth-child(5),
+    #empTable tbody td:nth-child(6),
+    #empTable tbody td:nth-child(7) {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    @media (max-width: 900px) {
+      .table-wrap tbody tr { height: 64px; }
+      .table-wrap tbody td { padding: 14px 14px; }
+      .actions-cell { gap: 6px; }
+      .action-btn { padding: 9px 12px; }
+    }
   </style>
 </head>
 <body>
@@ -88,11 +217,14 @@
             <circle cx="9" cy="7" r="4"/>
           </svg>
         </div>
-        <span class="brand-name">HR<span class="accent">System</span></span>
+        <span class="brand-name">نظام <span class="accent">الموارد</span></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center">
-        <a class="btn btn-ghost" href="/">الرئيسية</a>
-        <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
+        <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-ghost" href="/upload">رفع ملف</a>
+        <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-primary" href="/departments-page">الإدارات</a>
+        <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
     </div>
   </header>
@@ -117,6 +249,18 @@
           <div class="hero-title" id="deptTitle">جارٍ التحميل…</div>
           <div class="hero-sub" id="deptSub"></div>
         </div>
+      </div>
+      <div class="hero-right">
+        <span class="mini-badge" id="deptCountBadge" title="عدد الموظفين">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span id="deptCountText">—</span>
+        </span>
+        <button class="btn btn-ghost" type="button" onclick="loadEmployees()">تحديث</button>
       </div>
     </div>
 
@@ -144,7 +288,6 @@
               <th style="text-align:center">عارضة (يوم)</th>
               <th style="text-align:center">إذن (ساعة)</th>
               <th style="text-align:center">خصم (أيام)</th>
-              <th style="text-align:center">خصم (جنيه)</th>
               <th>إجراءات</th>
             </tr>
           </thead>
@@ -167,8 +310,14 @@
       </div>
       <div class="form-body">
         <input type="hidden" id="leaveEmpId" /><input type="hidden" id="leaveType" />
-        <div class="form-row"><label>عدد الأيام</label><input type="number" id="leaveDays" value="1" min="0.5" step="0.5" /></div>
-        <div class="form-row"><label>التاريخ</label><input type="date" id="leaveDate" /></div>
+        <div class="form-row"><label>التاريخ (من)</label><input type="date" id="leaveFromDate" onchange="syncLeaveDays()" /></div>
+        <div class="form-row"><label>التاريخ (إلى)</label><input type="date" id="leaveToDate" onchange="syncLeaveDays()" /></div>
+        <div class="form-row"><label>عدد الأيام</label><input type="number" id="leaveDays" value="1" min="1" step="1" readonly /></div>
+        <div class="form-row" style="margin-top:-6px">
+          <div id="leaveImpact" style="width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(10,16,32,.35);color:rgba(255,255,255,.85);font-size:12px;line-height:1.6">
+            اختر التاريخ لعرض تأثير الخصم على الرصيد.
+          </div>
+        </div>
         <div class="form-row"><label>ملاحظة (اختياري)</label><textarea id="leaveNote" rows="2" placeholder="مثلاً: إجازة عيد الأضحى"></textarea></div>
       </div>
       <div class="modal-footer">
@@ -189,11 +338,27 @@
       </div>
       <div class="form-body">
         <input type="hidden" id="permEmpId" />
-        <div class="form-row">
-          <label>عدد الساعات (الحد الأقصى 4 ساعات شهرياً)</label>
-          <input type="number" id="permHours" value="1" min="0.5" max="4" step="0.5" />
+        <div class="form-row"><label>التاريخ</label><select id="permDate" disabled></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>من</label><input type="time" id="permFrom" step="900" onchange="syncPermHours()" /></div>
+          <div class="form-row"><label>إلى</label><input type="time" id="permTo" step="900" onchange="syncPermHours()" /></div>
         </div>
-        <div class="form-row"><label>التاريخ</label><input type="date" id="permDate" /></div>
+        <div class="form-row">
+          <label>مدة الإذن</label>
+          <select id="permDuration" onchange="applyPermDuration()">
+            <option value="0.25">ربع ساعة</option>
+            <option value="0.5">نصف ساعة</option>
+            <option value="0.75">45 دقيقة</option>
+            <option value="1">ساعة</option>
+            <option value="1.5">ساعة ونصف</option>
+            <option value="2">ساعتين</option>
+            <option value="2.5">ساعتين ونصف</option>
+            <option value="3">3 ساعات</option>
+            <option value="3.5">3 ساعات ونصف</option>
+            <option value="4">4 ساعات</option>
+          </select>
+        </div>
+        <div class="form-row"><label>عدد الساعات (بحد أقصى 4 ساعات شهرياً)</label><input type="number" id="permHours" value="1" min="0.25" max="4" step="0.25" readonly /></div>
         <div class="form-row"><label>ملاحظة (اختياري)</label><textarea id="permNote" rows="2" placeholder="مثلاً: مراجعة طبية"></textarea></div>
       </div>
       <div class="modal-footer">
@@ -214,15 +379,9 @@
       </div>
       <div class="form-body">
         <input type="hidden" id="deductEmpId" />
-        <div class="form-row">
-          <label>نوع الخصم</label>
-          <select id="deductType">
-            <option value="days">أيام</option>
-            <option value="money">مبلغ مالي</option>
-          </select>
-        </div>
-        <div class="form-row"><label>القيمة</label><input type="number" id="deductAmount" value="0" min="0" step="0.5" /></div>
-        <div class="form-row"><label>التاريخ</label><input type="date" id="deductDate" /></div>
+        <div class="form-row"><label>التاريخ (من)</label><select id="deductFromDate" onchange="syncDeductDays()"></select></div>
+        <div class="form-row"><label>التاريخ (إلى)</label><select id="deductToDate" onchange="syncDeductDays()"></select></div>
+        <div class="form-row"><label>عدد أيام الخصم</label><input type="number" id="deductAmount" value="1" min="1" step="1" readonly /></div>
         <div class="form-row"><label>السبب</label><textarea id="deductReason" rows="2" placeholder="مثلاً: تأخر متكرر"></textarea></div>
       </div>
       <div class="modal-footer">
@@ -236,6 +395,8 @@
   <script>
     const deptName = decodeURIComponent(location.pathname.split('/department/')[1] || '');
     let allEmployees = [];
+    let availableDates = [];
+    let activeLeaveEmpSummary = null;
 
     function showToast(msg, type='success') {
       const t = document.getElementById('toast');
@@ -244,17 +405,140 @@
     }
     function numPill(val, cls) {
       const n = Number(val || 0);
-      return `<span class="num-pill ${n>0?cls:'num-zero'}">${n%1===0?n:n.toFixed(1)}</span>`;
+      return `<span dir="ltr" class="num-pill ${n>0?cls:'num-zero'}">${n%1===0?n:n.toFixed(1)}</span>`;
     }
     function deptShort(raw) {
       if (!raw) return '—';
       const re = /all\s*departments\s*>\s*القوة\s*>/i;
       if (re.test(raw)) return raw.replace(re,'').trim()||raw;
-      const idx = raw.indexOf('القوة>');
-      if (idx !== -1) return raw.slice(idx+'القوة>'.length).trim()||raw;
+      const m = String(raw).match(/القوة\s*>/);
+      if (m && m.index != null) return String(raw).slice(m.index + m[0].length).trim() || raw;
       return raw;
     }
     function todayISO() { return new Date().toISOString().slice(0,10); }
+    function monthOf(dateStr) { return String(dateStr || '').slice(0, 7); }
+    function diffDaysInclusive(from, to) {
+      const a = new Date(`${from}T00:00:00`);
+      const b = new Date(`${to}T00:00:00`);
+      const ms = b.getTime() - a.getTime();
+      return Math.floor(ms / 86400000) + 1;
+    }
+    function setSelectValue(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = value;
+      if (el.value !== value && el.options.length) el.selectedIndex = el.options.length - 1;
+    }
+    function setInputValue(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.value = value;
+    }
+    function populateDates(selectIds, selected) {
+      const opts = availableDates.length ? availableDates : [todayISO()];
+      for (const id of selectIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.innerHTML = opts.map(d => `<option value="${d}">${d}</option>`).join('');
+      }
+      for (const id of selectIds) setSelectValue(id, selected || (opts[opts.length - 1]));
+    }
+
+    async function loadAvailableDates() {
+      try {
+        const latest = await fetch('/latest-date').then(r => r.ok ? r.json() : ({ date: null }));
+        const ym = monthOf(latest.date) || monthOf(todayISO());
+        const status = await fetch(`/calendar-status?month=${encodeURIComponent(ym)}`).then(r => r.ok ? r.json() : ({ dates: [] }));
+        const dates = Array.isArray(status.dates) ? status.dates.map(String) : [];
+        availableDates = dates.filter(Boolean).sort();
+      } catch {
+        availableDates = [];
+      }
+      const def = availableDates.length ? availableDates[availableDates.length - 1] : todayISO();
+      populateDates(['permDate','deductFromDate','deductToDate'], def);
+      setInputValue('leaveFromDate', def);
+      setInputValue('leaveToDate', def);
+      syncLeaveDays();
+      syncDeductDays();
+      syncPermHours();
+    }
+
+    function syncLeaveDays() {
+      const fromEl = document.getElementById('leaveFromDate');
+      const toEl = document.getElementById('leaveToDate');
+      const from = fromEl?.value;
+      if (!from || !toEl) return;
+      let to = toEl.value || from;
+      if (to < from) { to = from; toEl.value = to; showToast('تاريخ "إلى" لا يمكن أن يكون قبل "من"','error'); }
+      document.getElementById('leaveDays').value = String(Math.max(1, diffDaysInclusive(from, to)));
+      updateLeaveImpact();
+    }
+
+    function syncDeductDays() {
+      const from = document.getElementById('deductFromDate')?.value;
+      const toEl = document.getElementById('deductToDate');
+      if (!from || !toEl) return;
+      let to = toEl.value || from;
+      if (to < from) { to = from; toEl.value = to; showToast('تاريخ "إلى" لا يمكن أن يكون قبل "من"','error'); }
+      document.getElementById('deductAmount').value = String(Math.max(1, diffDaysInclusive(from, to)));
+    }
+
+    function syncPermHours() {
+      const from = document.getElementById('permFrom')?.value;
+      const to = document.getElementById('permTo')?.value;
+      const out = document.getElementById('permHours');
+      const durationSel = document.getElementById('permDuration');
+      if (!out) return;
+      if (!from || !to) return;
+      const [fh, fm] = from.split(':').map(Number);
+      const [th, tm] = to.split(':').map(Number);
+      const a = fh * 60 + fm;
+      const b = th * 60 + tm;
+      if (b <= a) { out.value = '0.25'; return; }
+      let hours = (b - a) / 60;
+      hours = Math.round(hours * 4) / 4;
+      if (hours < 0.25) hours = 0.25;
+      if (hours > 4) {
+        hours = 4;
+        const maxToMin = a + 240;
+        const hh = String(Math.floor(maxToMin / 60)).padStart(2, '0');
+        const mm = String(maxToMin % 60).padStart(2, '0');
+        const toEl = document.getElementById('permTo');
+        if (toEl) toEl.value = `${hh}:${mm}`;
+        showToast('الحد الأقصى للإذن 4 ساعات','error');
+      }
+      out.value = String(hours);
+      if (durationSel) durationSel.value = String(hours);
+    }
+
+    function applyPermDuration() {
+      const durationSel = document.getElementById('permDuration');
+      const out = document.getElementById('permHours');
+      const fromEl = document.getElementById('permFrom');
+      const toEl = document.getElementById('permTo');
+      if (!durationSel || !out || !fromEl || !toEl) return;
+      const dur = Number(durationSel.value || 0);
+      if (!Number.isFinite(dur) || dur < 0.25) return;
+      out.value = String(dur);
+      const from = fromEl.value;
+      if (!from) return;
+      const [fh, fm] = from.split(':').map(Number);
+      const a = fh * 60 + fm;
+      const minutes = Math.round(dur * 60);
+      let b = a + minutes;
+      if (b > a + 240) {
+        b = a + 240;
+        out.value = '4';
+        durationSel.value = '4';
+        showToast('الحد الأقصى للإذن 4 ساعات','error');
+      }
+      if (b >= 24 * 60) {
+        b = 24 * 60 - 1;
+      }
+      const hh = String(Math.floor(b / 60)).padStart(2, '0');
+      const mm = String(b % 60).padStart(2, '0');
+      toEl.value = `${hh}:${mm}`;
+    }
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModal(id) { document.getElementById(id).classList.remove('open'); }
     document.querySelectorAll('.modal-overlay').forEach(o => {
@@ -265,32 +549,77 @@
       document.getElementById('leaveEmpId').value = empId;
       document.getElementById('leaveType').value = type;
       document.getElementById('leaveModalTitle').textContent = type==='annual'?'إضافة إجازة سنوية':'إضافة إجازة عارضة';
-      document.getElementById('leaveDays').value = 1;
-      document.getElementById('leaveDate').value = todayISO();
+      const def = availableDates.length ? availableDates[availableDates.length - 1] : todayISO();
+      setInputValue('leaveFromDate', def);
+      setInputValue('leaveToDate', def);
+      syncLeaveDays();
       document.getElementById('leaveNote').value = '';
+      activeLeaveEmpSummary = null;
+      const impactEl = document.getElementById('leaveImpact');
+      if (impactEl) impactEl.textContent = 'جارٍ تحميل الرصيد...';
+      fetch(`/employees/${empId}/summary`)
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { activeLeaveEmpSummary = j; updateLeaveImpact(); })
+        .catch(() => { activeLeaveEmpSummary = null; updateLeaveImpact(); });
       openModal('leaveModal');
     }
     function openPermModal(empId) {
       document.getElementById('permEmpId').value = empId;
-      document.getElementById('permHours').value = 1;
-      document.getElementById('permDate').value = todayISO();
+      const def = availableDates.length ? availableDates[availableDates.length - 1] : todayISO();
+      setSelectValue('permDate', def);
+      const pf = document.getElementById('permFrom');
+      const pt = document.getElementById('permTo');
+      const dur = document.getElementById('permDuration');
+      if (pf) pf.value = '09:00';
+      if (pt) pt.value = '10:00';
+      if (dur) dur.value = '1';
+      syncPermHours();
       document.getElementById('permNote').value = '';
       openModal('permModal');
     }
+
+    function updateLeaveImpact() {
+      const el = document.getElementById('leaveImpact');
+      if (!el) return;
+      const type = document.getElementById('leaveType')?.value || 'annual';
+      const days = Number(document.getElementById('leaveDays')?.value || 0);
+      if (!activeLeaveEmpSummary) {
+        el.textContent = 'اختر التاريخ لعرض تأثير الخصم على الرصيد.';
+        return;
+      }
+      const allowance = Number(type === 'annual' ? activeLeaveEmpSummary.leave_allowance_annual_days : activeLeaveEmpSummary.leave_allowance_casual_days) || 0;
+      const used = Number(type === 'annual' ? activeLeaveEmpSummary.total_annual_leave : activeLeaveEmpSummary.total_casual_leave) || 0;
+      const remainingBefore = Math.max(0, allowance - used);
+      const remainingAfter = Math.max(0, remainingBefore - days);
+      const typeName = type === 'annual' ? 'سنوية' : 'عارضة';
+      el.innerHTML = `
+        <div>النوع: <b>${typeName}</b></div>
+        <div>سيتم خصم: <b dir="ltr">${days}</b> يوم</div>
+        <div>الرصيد قبل: <b dir="ltr">${remainingBefore}</b> من أصل <b dir="ltr">${allowance}</b></div>
+        <div>المتبقي بعد الإضافة: <b dir="ltr" style="color:var(--green)">${remainingAfter}</b></div>
+      `;
+    }
     function openDeductModal(empId) {
       document.getElementById('deductEmpId').value = empId;
-      document.getElementById('deductAmount').value = 0;
-      document.getElementById('deductDate').value = todayISO();
+      const def = availableDates.length ? availableDates[availableDates.length - 1] : todayISO();
+      setSelectValue('deductFromDate', def);
+      setSelectValue('deductToDate', def);
+      syncDeductDays();
       document.getElementById('deductReason').value = '';
       openModal('deductModal');
     }
 
     async function submitLeave() {
       const empId = document.getElementById('leaveEmpId').value;
+      const from = document.getElementById('leaveFromDate').value;
+      const to = document.getElementById('leaveToDate').value || from;
+      const noteRaw = (document.getElementById('leaveNote').value || '').trim();
+      const rangeNote = (to && from && to !== from) ? `من ${from} إلى ${to}` : '';
+      const note = rangeNote ? (noteRaw ? `${noteRaw} (${rangeNote})` : rangeNote) : noteRaw;
       const body = { leave_type: document.getElementById('leaveType').value,
         days: parseFloat(document.getElementById('leaveDays').value),
-        date: document.getElementById('leaveDate').value,
-        note: document.getElementById('leaveNote').value };
+        date: from,
+        note };
       if (!body.date) { showToast('الرجاء اختيار التاريخ','error'); return; }
       const r = await fetch(`/employees/${empId}/leaves`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
       if (!r.ok) { showToast('فشل الحفظ','error'); return; }
@@ -298,21 +627,36 @@
     }
     async function submitPermission() {
       const empId = document.getElementById('permEmpId').value;
+      const date = document.getElementById('permDate').value;
+      const from = document.getElementById('permFrom').value;
+      const to = document.getElementById('permTo').value;
+      const noteRaw = (document.getElementById('permNote').value || '').trim();
+      const rangeNote = (from && to) ? `من ${from} إلى ${to}` : '';
+      const note = rangeNote ? (noteRaw ? `${noteRaw} (${rangeNote})` : rangeNote) : noteRaw;
       const body = { hours: parseFloat(document.getElementById('permHours').value),
-        date: document.getElementById('permDate').value,
-        note: document.getElementById('permNote').value };
+        date,
+        note };
       if (!body.date) { showToast('الرجاء اختيار التاريخ','error'); return; }
       const r = await fetch(`/employees/${empId}/permissions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if (!r.ok) { showToast('فشل الحفظ','error'); return; }
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
       closeModal('permModal'); showToast('تم إضافة الإذن ✓'); await loadEmployees();
     }
     async function submitDeduction() {
       const empId = document.getElementById('deductEmpId').value;
+      const from = document.getElementById('deductFromDate').value;
+      const to = document.getElementById('deductToDate').value || from;
+      const reasonRaw = (document.getElementById('deductReason').value || '').trim();
+      const rangeNote = (to && from && to !== from) ? `من ${from} إلى ${to}` : '';
+      const reason = rangeNote ? (reasonRaw ? `${reasonRaw} (${rangeNote})` : rangeNote) : reasonRaw;
       const body = { 
-        deduction_type: document.getElementById('deductType').value,
+        deduction_type: 'days',
         amount: parseFloat(document.getElementById('deductAmount').value),
-        date: document.getElementById('deductDate').value,
-        reason: document.getElementById('deductReason').value 
+        date: from,
+        reason
       };
       if (!body.date) { showToast('الرجاء اختيار التاريخ','error'); return; }
       const r = await fetch(`/employees/${empId}/deductions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -323,14 +667,13 @@
     function renderRow(e) {
       const plusIco = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
       return `<tr>
-        <td>${e.employee_code||'—'}</td>
+        <td><span dir="ltr">${e.employee_code||'—'}</span></td>
         <td><a class="emp-name-link" href="/employee-page/${e.id}">${e.name}</a></td>
-        <td>${e.job_title||'—'}</td>
+        <td>${(e.job_title||'—') === 'Employee' ? 'موظف' : (e.job_title||'—')}</td>
         <td style="text-align:center">${numPill(e.total_annual_leave,'num-green')}</td>
         <td style="text-align:center">${numPill(e.total_casual_leave,'num-blue')}</td>
         <td style="text-align:center">${numPill(e.total_permission_hours,'num-orange')}</td>
         <td style="text-align:center">${numPill(e.total_deduction_days,'num-red')}</td>
-        <td style="text-align:center">${numPill(e.total_deduction_money,'num-red')}</td>
         <td><div class="actions-cell">
           <button class="action-btn btn-annual" onclick="openLeaveModal(${e.id},'annual')">${plusIco} سنوية</button>
           <button class="action-btn btn-casual" onclick="openLeaveModal(${e.id},'casual')">${plusIco} عارضة</button>
@@ -355,12 +698,11 @@
         const r = await fetch(`/departments/${encodeURIComponent(deptName)}/employees`);
         allEmployees = await r.json();
         document.getElementById('deptTitle').textContent = deptShort(deptName);
-        document.getElementById('deptSub').textContent = `${allEmployees.length} موظف`;
+        document.getElementById('deptSub').textContent = `بيانات مجمعة للإجازات والأذونات والخصومات داخل الإدارة`;
+        document.getElementById('deptCountText').textContent = `${allEmployees.length} موظف`;
         const tA=allEmployees.reduce((s,e)=>s+(e.total_annual_leave||0),0);
         const tC=allEmployees.reduce((s,e)=>s+(e.total_casual_leave||0),0);
         const tP=allEmployees.reduce((s,e)=>s+(e.total_permission_hours||0),0);
-        const tDD=allEmployees.reduce((s,e)=>s+(e.total_deduction_days||0),0);
-        const tDM=allEmployees.reduce((s,e)=>s+(e.total_deduction_money||0),0);
         const fmt = v => v%1===0?v:v.toFixed(1);
         document.getElementById('kpiRow').innerHTML = `
           <div class="kpi-card"><div class="kpi-icon kpi-green">
@@ -371,10 +713,7 @@
             </div><div class="kpi-body"><span class="kpi-label">إجازات عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(tC)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-orange">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">ساعات إذن</span><span class="kpi-value" style="color:var(--orange)">${fmt(tP)}</span></div></div>
-          <div class="kpi-card"><div class="kpi-icon" style="background:var(--red-dim);color:var(--red)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">إجمالي الخصومات</span><span class="kpi-value" style="color:var(--red); font-size:18px">${fmt(tDD)} يوم | ${tDM.toLocaleString()} ج</span></div></div>`;
+            </div><div class="kpi-body"><span class="kpi-label">ساعات إذن</span><span class="kpi-value" style="color:var(--orange)">${fmt(tP)}</span></div></div>`;
         filterTable();
       } catch {
         document.getElementById('empBody').innerHTML='<tr><td colspan="8" class="loading-row">فشل تحميل الموظفين.</td></tr>';
@@ -382,7 +721,10 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', loadEmployees);
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadAvailableDates();
+      await loadEmployees();
+    });
   </script>
 </body>
 </html>

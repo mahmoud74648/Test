@@ -1,15 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HR Management System</title>
-  <meta name="description" content="Modern HR dashboard for managing employees and departments." />
+  <title>لوحة الحضور – نظام الموارد البشرية</title>
+  <meta name="description" content="لوحة لمتابعة الحضور والإدارات والموظفين." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
   <style>
+    body {
+      background:
+        radial-gradient(900px 550px at 80% 0%, rgba(79, 142, 247, .12), transparent 60%),
+        radial-gradient(850px 520px at 10% 25%, rgba(155, 89, 182, .12), transparent 55%),
+        linear-gradient(180deg, #0a1020 0%, #070b14 70%, #060910 100%);
+    }
+
+    .dash-hero {
+      background: linear-gradient(135deg, rgba(79, 142, 247, .14), rgba(155, 89, 182, .12));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .dash-hero::before {
+      content: "";
+      position: absolute;
+      inset: -140px -230px auto auto;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle at 30% 30%, rgba(79, 142, 247, .42), rgba(79, 142, 247, 0) 65%);
+      opacity: .45;
+      transform: rotate(12deg);
+      pointer-events: none;
+    }
+
+    .dash-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.35;
+    }
+
+    .dash-sub {
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: rgba(255,255,255,.78);
+      line-height: 1.7;
+    }
+
+    .dash-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(10, 16, 32, .62);
+      border: 1px solid rgba(255, 255, 255, .12);
+      color: rgba(255,255,255,.85);
+      font-size: 12px;
+      font-weight: 800;
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+
+    .mini-badge svg { width: 16px; height: 16px; }
+
     #empTable.attendance-table {
       table-layout: fixed;
     }
@@ -42,7 +116,7 @@
 
     #empTable.attendance-table .col-work {
       width: 140px;
-      text-align: right;
+      text-align: center;
     }
 
     #empTable.attendance-table td.col-records {
@@ -52,6 +126,36 @@
       word-break: break-word;
       overflow-wrap: anywhere;
       line-height: 1.45;
+    }
+
+    #empTable.attendance-table th.col-id,
+    #empTable.attendance-table td.col-id {
+      text-align: center;
+    }
+
+    #empTable.attendance-table th.col-name,
+    #empTable.attendance-table td.col-name,
+    #empTable.attendance-table th.col-dept,
+    #empTable.attendance-table td.col-dept {
+      text-align: right;
+    }
+
+    #empTable.attendance-table th.col-date,
+    #empTable.attendance-table td.col-date,
+    #empTable.attendance-table th.col-records,
+    #empTable.attendance-table td.col-records,
+    #empTable.attendance-table th.col-work,
+    #empTable.attendance-table td.col-work {
+      direction: ltr;
+      unicode-bidi: plaintext;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #empTable.attendance-table th.col-date,
+    #empTable.attendance-table td.col-date,
+    #empTable.attendance-table th.col-work,
+    #empTable.attendance-table td.col-work {
+      text-align: center;
     }
   </style>
 </head>
@@ -69,17 +173,37 @@
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
         </div>
-        <span class="brand-name">HR<span class="accent">System</span></span>
+        <span class="brand-name">نظام <span class="accent">الموارد</span></span>
       </div>
       <div style="display:flex;gap:10px;align-items:center">
         <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-ghost" href="/upload">رفع ملف</a>
+        <a class="btn btn-primary" href="/dashboard">الداشبورد</a>
         <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
-
+        <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
     </div>
   </header>
 
   <main class="main">
+    <section class="dash-hero">
+      <div style="position:relative;z-index:1">
+        <h1 class="dash-title">لوحة الداشبورد</h1>
+        <p class="dash-sub">عرض الحضور حسب التاريخ + إحصائيات مختصرة عن العاملين والإدارات.</p>
+      </div>
+      <div class="dash-badges">
+        <span class="mini-badge" id="selectedDateBadge" title="تاريخ العرض">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span id="selectedDateText">—</span>
+        </span>
+      </div>
+    </section>
+
     <!-- KPI Cards -->
     <section class="kpi-grid">
       <div class="kpi-card" id="kpi-total">
@@ -92,8 +216,32 @@
           </svg>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">جميع العاملين</span>
+          <span class="kpi-label">إجمالي العاملين (القوة)</span>
           <span class="kpi-value" id="stat-total">—</span>
+        </div>
+      </div>
+      <div class="kpi-card" id="kpi-active">
+        <div class="kpi-icon kpi-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 12l2.5 2.5L16 9" />
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">نشطون (القوة)</span>
+          <span class="kpi-value" id="stat-active">—</span>
+        </div>
+      </div>
+      <div class="kpi-card" id="kpi-avg-leave">
+        <div class="kpi-icon kpi-orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 6v6l4 2" />
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">متوسط أيام الراحة</span>
+          <span class="kpi-value" id="stat-avgleave">—</span>
         </div>
       </div>
       <div class="kpi-card" id="kpi-depts">
@@ -131,7 +279,7 @@
     <section class="table-card">
       <div class="table-header">
         <div style="display:flex;align-items:center;gap:10px">
-          <h2 class="table-title" id="tableTitle">Attendance</h2>
+          <h2 class="table-title" id="tableTitle">الحضور والانصراف</h2>
         </div>
         <span class="badge" id="rowCount">0</span>
       </div>
@@ -139,17 +287,17 @@
         <table id="empTable" class="attendance-table">
           <thead id="tableHead">
             <tr>
-              <th class="col-id">ID</th>
-              <th class="col-name">Name</th>
-              <th class="col-dept">Department</th>
-              <th class="col-date">Date</th>
-              <th class="col-records">Attendance Records</th>
-              <th class="col-work">Total Work Hours</th>
+              <th class="col-id">الكود</th>
+              <th class="col-name">الاسم</th>
+              <th class="col-dept">الإدارة</th>
+              <th class="col-date">التاريخ</th>
+              <th class="col-records">سجلات البصمة</th>
+              <th class="col-work">إجمالي ساعات العمل</th>
             </tr>
           </thead>
           <tbody id="empBody">
             <tr>
-              <td colspan="6" class="loading-row">Loading attendance…</td>
+              <td colspan="6" class="loading-row">جاري تحميل بيانات الحضور…</td>
             </tr>
           </tbody>
         </table>

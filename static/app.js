@@ -11,9 +11,14 @@ function showToast(msg, type = 'success') {
 
 function fmt(v) { return v == null || v === '' ? '—' : v; }
 
+function fmtTime(v) {
+  if (v == null || v === '') return '—';
+  return String(v).trim().replace(/\s*:\s*/g, ':').replace(/\s*-\s*/g, '-');
+}
+
 function fmtRecords(v) {
   if (v == null || v === '') return '—';
-  const s = String(v);
+  const s = String(v).trim().replace(/\s*:\s*/g, ':').replace(/\s*-\s*/g, '-');
   return s.replace(/[;,|]/g, m => `${m}\u200b`);
 }
 
@@ -22,8 +27,8 @@ function deptLabel(rawDept) {
   const s = String(rawDept);
   const re = /all\s*departments\s*>\s*القوة\s*>/i;
   if (re.test(s)) return s.replace(re, '').trim() || s;
-  const idx = s.indexOf('القوة>');
-  if (idx !== -1) return s.slice(idx + 'القوة>'.length).trim() || s;
+  const m = s.match(/القوة\s*>/);
+  if (m && m.index != null) return s.slice(m.index + m[0].length).trim() || s;
   return s;
 }
 
@@ -67,6 +72,12 @@ async function loadStats() {
     const totalEl = document.getElementById('stat-total');
     if (totalEl) totalEl.textContent = d.total_employees ?? 0;
 
+    const activeEl = document.getElementById('stat-active');
+    if (activeEl) activeEl.textContent = d.active_employees ?? 0;
+
+    const avgEl = document.getElementById('stat-avgleave');
+    if (avgEl) avgEl.textContent = d.avg_leave_days ?? 0;
+
     const deptsEl = document.getElementById('stat-depts');
     if (deptsEl) deptsEl.textContent = d.department_count ?? 0;
   } catch { /* silent */ }
@@ -74,6 +85,8 @@ async function loadStats() {
 
 async function reloadForDate() {
   const d = getSelectedDate();
+  const dateText = document.getElementById('selectedDateText');
+  if (dateText) dateText.textContent = d || latestDate || '—';
   await loadAttendance(d);
   filterTable();
 }
@@ -86,7 +99,7 @@ async function loadAttendance(date) {
   } catch {
     attendanceRows = [];
     document.getElementById('empBody').innerHTML =
-      '<tr><td colspan="6" class="loading-row">Failed to load attendance.</td></tr>';
+      '<tr><td colspan="6" class="loading-row">تعذر تحميل بيانات الحضور.</td></tr>';
   }
 }
 
@@ -95,7 +108,7 @@ function renderTable(rows) {
   document.getElementById('rowCount').textContent = rows.length;
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading-row">No rows match your search.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading-row">لا توجد نتائج مطابقة.</td></tr>';
     return;
   }
 
@@ -104,9 +117,9 @@ function renderTable(rows) {
       <td class="col-id">${fmt(e.employee_code)}</td>
       <td class="col-name"><strong>${fmt(e.name)}</strong></td>
       <td class="col-dept">${deptLabel(e.dept)}</td>
-      <td class="col-date">${fmt(e.date)}</td>
-      <td class="col-records">${fmtRecords(e.attendance_records)}</td>
-      <td class="col-work">${fmt(e.total_work_hours)}</td>
+      <td class="col-date"><span dir="ltr">${fmt(e.date)}</span></td>
+      <td class="col-records"><span dir="ltr">${fmtRecords(e.attendance_records)}</span></td>
+      <td class="col-work"><span dir="ltr">${fmtTime(e.total_work_hours)}</span></td>
     </tr>`).join('');
 }
 
@@ -133,10 +146,10 @@ async function importExcel() {
     });
     if (!r.ok) throw new Error();
     const res = await r.json();
-    showToast(`Imported ${res.attendance_rows_upserted} rows from ${res.file}`);
+    showToast(`تم الاستيراد بنجاح: ${res.attendance_rows_upserted} سجل من ${res.file}`);
     await loadStats();
     await reloadForDate();
   } catch {
-    showToast('Import failed. Make sure test0-hik.xlsx exists.', 'error');
+    showToast('فشل الاستيراد. تأكد من وجود ملف test0-hik.xlsx', 'error');
   }
 }

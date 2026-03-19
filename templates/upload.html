@@ -1,90 +1,551 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Upload Daily Sheet</title>
+  <title>رفع ملف اليوم – نظام الموارد البشرية</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body { font-family: 'Cairo', system-ui, sans-serif; }
+    body {
+      background:
+        radial-gradient(900px 550px at 80% 0%, rgba(79, 142, 247, .12), transparent 60%),
+        radial-gradient(850px 520px at 10% 25%, rgba(155, 89, 182, .12), transparent 55%),
+        linear-gradient(180deg, #0a1020 0%, #070b14 70%, #060910 100%);
+    }
+
+    .upload-hero {
+      background: linear-gradient(135deg, rgba(79, 142, 247, .14), rgba(155, 89, 182, .12));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .upload-hero::before {
+      content: "";
+      position: absolute;
+      inset: -140px -230px auto auto;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle at 30% 30%, rgba(79, 142, 247, .42), rgba(79, 142, 247, 0) 65%);
+      opacity: .45;
+      transform: rotate(12deg);
+      pointer-events: none;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.35;
+    }
+
+    .hero-sub {
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: rgba(255,255,255,.78);
+      line-height: 1.7;
+    }
+
+    .hero-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .mini-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(10, 16, 32, .62);
+      border: 1px solid rgba(255, 255, 255, .12);
+      color: rgba(255,255,255,.85);
+      font-size: 12px;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+
+    .mini-badge svg { width: 16px; height: 16px; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.88);
+      background: rgba(255,255,255,.06);
+      white-space: nowrap;
+      letter-spacing: .01em;
+    }
+
+    .status-badge.ok {
+      background: rgba(45, 214, 123, .12);
+      color: rgba(190, 255, 222, .95);
+      border-color: rgba(45, 214, 123, .22);
+    }
+
+    .status-badge.miss {
+      background: rgba(248, 113, 113, .12);
+      color: rgba(255, 214, 214, .95);
+      border-color: rgba(248, 113, 113, .22);
+    }
+
+    .status-badge.wait {
+      background: rgba(251, 146, 60, .12);
+      color: rgba(255, 233, 205, .95);
+      border-color: rgba(251, 146, 60, .22);
+    }
+
+    .upload-layout {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 980px) {
+      .upload-layout { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: rgba(20, 23, 32, .92);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,.35);
+    }
+
+    .panel-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      color: #fff;
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .panel-title svg { width: 18px; height: 18px; color: rgba(255,255,255,.88); }
+
+    .panel-body {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .field label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,.82);
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .field small {
+      color: rgba(255,255,255,.55);
+      font-weight: 700;
+      font-size: 11px;
+    }
+
+    .field input[type="date"] {
+      width: 100%;
+      background: rgba(28, 32, 48, .92);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius-sm);
+      color: rgba(255,255,255,.92);
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .18s, box-shadow .18s;
+    }
+
+    .field input[type="date"]:focus {
+      border-color: rgba(79, 142, 247, .8);
+      box-shadow: 0 0 0 3px rgba(79, 142, 247, .18);
+    }
+
+    .drop {
+      border: 1px dashed rgba(255,255,255,.18);
+      border-radius: var(--radius);
+      background: rgba(10, 16, 32, .55);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color .18s, background .18s, transform .18s;
+    }
+
+    .drop:hover { border-color: rgba(79,142,247,.55); background: rgba(10,16,32,.65); }
+    .drop.drag { border-color: rgba(79,142,247,.85); background: rgba(79,142,247,.08); transform: translateY(-1px); }
+
+    .drop-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .drop-ico {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.92);
+      background: rgba(79, 142, 247, .12);
+      border: 1px solid rgba(79, 142, 247, .22);
+      flex-shrink: 0;
+    }
+
+    .drop-ico svg { width: 20px; height: 20px; }
+
+    .drop-meta { min-width: 0; }
+    .drop-title { font-weight: 900; color: rgba(255,255,255,.92); font-size: 13px; }
+    .drop-sub { margin-top: 3px; color: rgba(255,255,255,.60); font-weight: 700; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .drop input[type="file"] { display: none; }
+
+    .hint-card {
+      padding: 16px 18px;
+      background: rgba(10, 16, 32, .55);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+    }
+
+    .hint-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: rgba(255,255,255,.9);
+      margin: 0 0 10px;
+      font-size: 13px;
+    }
+
+    .hint-title svg { width: 16px; height: 16px; }
+
+    .hint-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: rgba(255,255,255,.70);
+      font-weight: 700;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .hint-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .hint-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 5px;
+      background: rgba(79,142,247,.28);
+      border: 1px solid rgba(79,142,247,.22);
+      flex-shrink: 0;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+
+    .toast {
+      position: static;
+      opacity: 1;
+      transform: none;
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
-  <main class="main" style="max-width:900px;margin:0 auto;padding-top:48px">
-    <section class="table-card" style="padding:24px">
-      <div class="table-header" style="margin-bottom:16px">
-        <h2 class="table-title">Daily Excel Import</h2>
-        <span class="badge" id="uploadStatus">Ready</span>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <span class="brand-name">نظام <span class="accent">الموارد</span></span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div>
-          <label style="display:block;margin-bottom:8px;font-weight:600">Date (YYYY-MM-DD)</label>
-          <input id="selectedDate" type="date" style="width:100%" />
-        </div>
-        <div>
-          <label style="display:block;margin-bottom:8px;font-weight:600">Select daily Excel sheet (.xlsx)</label>
-          <input id="excelFile" type="file" accept=".xlsx,.xls" style="width:100%" />
-        </div>
-        <label style="display:flex;align-items:center;gap:10px">
-          <input id="resetDb" type="checkbox" />
-          <span>Reset database (use only for first setup)</span>
-        </label>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="uploadExcel()">Upload & Import</button>
-          <a class="btn btn-ghost" href="/">Month Overview</a>
-          <a class="btn btn-ghost" href="/dashboard">Go to Dashboard</a>
-        </div>
-        <div class="toast" id="toast" style="position:static;opacity:1;transform:none"></div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-primary" href="/upload">رفع ملف</a>
+        <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
+        <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
+    </div>
+  </header>
+
+  <main class="main" >
+    <section class="upload-hero">
+      <div style="position:relative;z-index:1">
+        <h1 class="hero-title">رفع ملف الحضور اليومي</h1>
+        <p class="hero-sub">اختر التاريخ ثم ارفع ملف الإكسل. بعد الاستيراد سيتم تحويلك تلقائياً إلى الداشبورد.</p>
+      </div>
+      <div class="hero-badges">
+        <span class="mini-badge" id="selectedDateBadge" title="التاريخ المحدد">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span id="selectedDateText">—</span>
+        </span>
+        <span class="status-badge wait" id="uploadStatus" aria-live="polite">جاهز</span>
+      </div>
+    </section>
+
+    <section class="upload-layout">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 5 17 10" />
+              <line x1="12" y1="5" x2="12" y2="20" />
+            </svg>
+            بيانات الرفع
+          </h2>
+          <a class="btn btn-ghost" href="/" title="العودة للوحة الشهر">لوحة الشهر</a>
+        </div>
+
+        <div class="panel-body">
+          <div class="field">
+            <label for="selectedDate">
+              <span>التاريخ</span>
+              <small>يُفضّل مطابقته لتاريخ الملف</small>
+            </label>
+            <input id="selectedDate" type="date" />
+          </div>
+
+          <div class="field">
+            <label>
+              <span>ملف الإكسل</span>
+              <small>xlsx / xls</small>
+            </label>
+            <label class="drop" id="dropZone" tabindex="0">
+              <span class="drop-left">
+                <span class="drop-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <polyline points="9 15 12 12 15 15" />
+                  </svg>
+                </span>
+                <span class="drop-meta">
+                  <div class="drop-title">اسحب الملف هنا أو اضغط للاختيار</div>
+                  <div class="drop-sub" id="fileName">لم يتم اختيار ملف بعد</div>
+                </span>
+              </span>
+              <input id="excelFile" type="file" accept=".xlsx,.xls" />
+            </label>
+          </div>
+
+          <label class="hint-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+            <span style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-weight:900;color:rgba(255,255,255,.9);font-size:13px">إعادة تهيئة قاعدة البيانات</span>
+              <span style="color:rgba(255,255,255,.60);font-weight:700;font-size:12px">للاستخدام عند الإعداد الأول فقط</span>
+            </span>
+            <input id="resetDb" type="checkbox" />
+          </label>
+
+          <div class="actions">
+            <button class="btn btn-primary" onclick="uploadExcel()">رفع </button>
+            <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+          </div>
+
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" />
+              <path d="M12 8h.01" />
+            </svg>
+            ملاحظات سريعة
+          </h2>
+        </div>
+        <div class="panel-body">
+          <div class="hint-card">
+            <div class="hint-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4" />
+                <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+              </svg>
+              قبل الرفع
+            </div>
+            <ul class="hint-list">
+              <li class="hint-item"><span class="hint-dot"></span><span>اختر تاريخ اليوم الصحيح.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>يفضل أن يكون الملف بنفس تنسيق test0-hik.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>عند اختلاف تواريخ الملف سيتم تنبيهك بالتواريخ الموجودة.</span></li>
+            </ul>
+          </div>
+
+          <div class="hint-card">
+            <div class="hint-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1v22" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              بعد الرفع
+            </div>
+            <ul class="hint-list">
+              <li class="hint-item"><span class="hint-dot"></span><span>سيتم تحويلك إلى الداشبورد تلقائياً.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>يمكنك الرجوع إلى لوحة الشهر لمراجعة حالة الرفع.</span></li>
+            </ul>
+          </div>
+        </div>
+      </aside>
     </section>
   </main>
 
   <script>
     const toast = document.getElementById('toast');
     const dateInput = document.getElementById('selectedDate');
+    const dateText = document.getElementById('selectedDateText');
+    const dateBadge = document.getElementById('selectedDateBadge');
+    const statusEl = document.getElementById('uploadStatus');
+    const fileInput = document.getElementById('excelFile');
+    const fileName = document.getElementById('fileName');
+    const dropZone = document.getElementById('dropZone');
+
     function show(msg, type = 'success') {
       toast.textContent = msg;
       toast.className = `toast ${type} show`;
     }
+
+    function setStatus(text, mode) {
+      statusEl.textContent = text;
+      statusEl.className = `status-badge ${mode || ''}`.trim();
+    }
+
+    function setSelectedDateUI(v) {
+      const txt = v && String(v).length >= 10 ? String(v) : '—';
+      dateText.textContent = txt;
+      dateBadge.title = `التاريخ المحدد: ${txt}`;
+    }
+
+    function setFileUI(file) {
+      if (!file) {
+        fileName.textContent = 'لم يتم اختيار ملف بعد';
+        fileName.title = '';
+        return;
+      }
+      fileName.textContent = file.name;
+      fileName.title = file.name;
+    }
+
     function getParam(name) {
       const v = new URLSearchParams(window.location.search).get(name);
       return v == null || v === '' ? null : v;
     }
     function initDate() {
       const fromQuery = getParam('date');
-      if (fromQuery) { dateInput.value = fromQuery; return; }
+      if (fromQuery) { dateInput.value = fromQuery; setSelectedDateUI(fromQuery); return; }
       const t = new Date();
       const yyyy = t.getFullYear();
       const mm = String(t.getMonth() + 1).padStart(2, '0');
       const dd = String(t.getDate()).padStart(2, '0');
-      dateInput.value = `${yyyy}-${mm}-${dd}`;
+      const v = `${yyyy}-${mm}-${dd}`;
+      dateInput.value = v;
+      setSelectedDateUI(v);
     }
+
+    dateInput.addEventListener('change', () => setSelectedDateUI(dateInput.value));
+    fileInput.addEventListener('change', () => setFileUI(fileInput.files[0]));
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag');
+      const files = e.dataTransfer?.files;
+      if (files && files.length) {
+        fileInput.files = files;
+        setFileUI(files[0]);
+      }
+    });
+
     async function uploadExcel() {
-      const f = document.getElementById('excelFile').files[0];
-      if (!f) { show('Please choose an Excel file first.', 'error'); return; }
+      const f = fileInput.files[0];
+      if (!f) { show('اختر ملف الإكسل أولاً.', 'error'); return; }
       const selected = dateInput.value;
-      if (!selected) { show('Please choose the date first.', 'error'); return; }
+      if (!selected) { show('اختر التاريخ أولاً.', 'error'); return; }
       const fd = new FormData();
       fd.append('file', f);
       fd.append('reset_db', document.getElementById('resetDb').checked ? 'true' : 'false');
-      document.getElementById('uploadStatus').textContent = 'Uploading...';
+      setStatus('جاري الرفع...', 'wait');
       try {
         const r = await fetch('/import/upload', { method: 'POST', body: fd });
         if (!r.ok) throw new Error(await r.text());
         const res = await r.json();
-        document.getElementById('uploadStatus').textContent = 'Imported';
+        setStatus('تم الاستيراد', 'ok');
         const dates = (res.distinct_dates || []).map(String);
         if (dates.length && !dates.includes(selected)) {
-          show(`Imported ${res.attendance_rows_upserted} rows, but the file dates are: ${dates.join(', ')}`, 'error');
+          show(`تم الاستيراد: ${res.attendance_rows_upserted} سجل، لكن تواريخ الملف هي: ${dates.join('، ')}`, 'error');
           return;
         }
-        show(`Imported ${res.attendance_rows_upserted} rows for ${selected}`);
+        show(`تم استيراد ${res.attendance_rows_upserted} سجل لتاريخ ${selected}`);
         setTimeout(() => { window.location.href = `/dashboard?date=${encodeURIComponent(selected)}`; }, 600);
       } catch (e) {
-        document.getElementById('uploadStatus').textContent = 'Failed';
-        show('Import failed. Make sure the file is in test0-hik format.', 'error');
+        setStatus('فشل', 'miss');
+        show('فشل الاستيراد. تأكد أن الملف بنفس تنسيق test0-hik.', 'error');
       }
     }
     initDate();
+    setStatus('جاهز', 'wait');
+    setFileUI(fileInput.files[0]);
   </script>
 </body>
 </html>
