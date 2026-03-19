@@ -629,14 +629,51 @@ def dept_employees(dept_name: str, db: Session = Depends(get_db)):
 # ── Manual Leaves ──────────────────────────────────────────────────────────────
 @app.post("/employees/{emp_id}/leaves", response_model=schemas.LeaveOut, status_code=201)
 def add_leave(emp_id: int, payload: schemas.LeaveCreate, db: Session = Depends(get_db)):
+    _ensure_employee_allowance_columns()
     emp = db.query(models.Employee).filter(models.Employee.id == emp_id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
+
+    leave_type = (payload.leave_type or "").strip().lower()
+    if leave_type not in {"annual", "casual"}:
+        raise HTTPException(status_code=400, detail="نوع الإجازة غير صحيح (annual/casual)")
+
+    days = float(payload.days or 0.0)
+    if days <= 0:
+        raise HTTPException(status_code=400, detail="عدد الأيام يجب أن يكون أكبر من صفر")
+
+    total_annual = float(sum(l.days for l in emp.leaves if l.leave_type == "annual") or 0.0)
+    total_casual = float(sum(l.days for l in emp.leaves if l.leave_type == "casual") or 0.0)
+    total_deduct_d = float(sum(d.amount for d in emp.deductions if d.deduction_type == "days") or 0.0)
+
+    allowance_annual = float(getattr(emp, "leave_allowance_annual_days", 0.0) or 0.0)
+    allowance_casual = float(getattr(emp, "leave_allowance_casual_days", 0.0) or 0.0)
+
+    annual_remaining = max(0.0, allowance_annual - total_annual)
+    casual_remaining = max(0.0, allowance_casual - total_casual)
+    total_remaining = max(0.0, (annual_remaining + casual_remaining) - total_deduct_d)
+
+    if leave_type == "annual" and days > annual_remaining:
+        raise HTTPException(
+            status_code=400,
+            detail=f"لا يوجد رصيد سنوي كافي. المتبقي: {annual_remaining:g} يوم",
+        )
+    if leave_type == "casual" and days > casual_remaining:
+        raise HTTPException(
+            status_code=400,
+            detail=f"لا يوجد رصيد عارضة كافي. المتبقي: {casual_remaining:g} يوم",
+        )
+    if days > total_remaining:
+        raise HTTPException(
+            status_code=400,
+            detail=f"لا يوجد رصيد إجازات كافي بعد الخصم. المتبقي: {total_remaining:g} يوم",
+        )
+
     from datetime import datetime as _dt
     leave = models.Leave(
         employee_id=emp_id,
-        leave_type=payload.leave_type,
-        days=payload.days,
+        leave_type=leave_type,
+        days=days,
         date=payload.date,
         note=payload.note or "",
         created_at=_dt.now().strftime("%Y-%m-%d %H:%M:%S"),

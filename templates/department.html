@@ -622,7 +622,11 @@
         note };
       if (!body.date) { showToast('الرجاء اختيار التاريخ','error'); return; }
       const r = await fetch(`/employees/${empId}/leaves`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if (!r.ok) { showToast('فشل الحفظ','error'); return; }
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
       closeModal('leaveModal'); showToast('تم إضافة الإجازة ✓'); await loadEmployees();
     }
     async function submitPermission() {
@@ -660,7 +664,11 @@
       };
       if (!body.date) { showToast('الرجاء اختيار التاريخ','error'); return; }
       const r = await fetch(`/employees/${empId}/deductions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      if (!r.ok) { showToast('فشل الحفظ','error'); return; }
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
       closeModal('deductModal'); showToast('تم إضافة الخصم ✓'); await loadEmployees();
     }
 
