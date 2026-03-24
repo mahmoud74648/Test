@@ -10,10 +10,22 @@ class EmployeeBase(BaseModel):
     email:     Optional[str] = None
     salary:    Optional[float] = 0.0
     join_date: Optional[str] = None
+    contract_end_date: Optional[str] = None
     rests:     Optional[int] = 0
     status:    Optional[str] = "active"
     leave_allowance_annual_days: Optional[float] = 0.0
     leave_allowance_casual_days: Optional[float] = 0.0
+    national_id: Optional[str] = None
+    insurance_number: Optional[str] = None
+    education: Optional[str] = None
+    university: Optional[str] = None
+    marital_status: Optional[str] = None
+    religion: Optional[str] = None
+    governorate: Optional[str] = None
+    city: Optional[str] = None
+    area: Optional[str] = None
+    address: Optional[str] = None
+    iban: Optional[str] = None
 
 class EmployeeCreate(EmployeeBase):
     pass
@@ -27,10 +39,22 @@ class EmployeeUpdate(BaseModel):
     email:     Optional[str] = None
     salary:    Optional[float] = None
     join_date: Optional[str] = None
+    contract_end_date: Optional[str] = None
     rests:     Optional[int] = None
     status:    Optional[str] = None
     leave_allowance_annual_days: Optional[float] = None
     leave_allowance_casual_days: Optional[float] = None
+    national_id: Optional[str] = None
+    insurance_number: Optional[str] = None
+    education: Optional[str] = None
+    university: Optional[str] = None
+    marital_status: Optional[str] = None
+    religion: Optional[str] = None
+    governorate: Optional[str] = None
+    city: Optional[str] = None
+    area: Optional[str] = None
+    address: Optional[str] = None
+    iban: Optional[str] = None
 
 class EmployeeOut(EmployeeBase):
     id: int

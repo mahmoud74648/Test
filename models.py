@@ -3,6 +3,12 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from database import Base
 
+class Department(Base):
+    __tablename__ = "departments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+
 class Employee(Base):
     __tablename__ = "employees"
 
@@ -19,6 +25,18 @@ class Employee(Base):
     status     = Column(String, default="active")   # active | inactive
     leave_allowance_annual_days = Column(Float, default=0.0)
     leave_allowance_casual_days = Column(Float, default=0.0)
+    contract_end_date = Column(String)
+    national_id = Column(String)
+    insurance_number = Column(String)
+    education = Column(String)
+    university = Column(String)
+    marital_status = Column(String)
+    religion = Column(String)
+    governorate = Column(String)
+    city = Column(String)
+    area = Column(String)
+    address = Column(Text)
+    iban = Column(String)
 
     attendance_records = relationship(
         "AttendanceRecord",

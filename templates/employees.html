@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الموظفين – نظام الموارد البشرية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body { font-family: 'Cairo', system-ui, sans-serif; }
+    .page-hero {
+      background: linear-gradient(135deg, rgba(79, 142, 247, .14), rgba(155, 89, 182, .12));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+    }
+    .page-hero::before {
+      content: "";
+      position: absolute;
+      inset: -140px -230px auto auto;
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle at 30% 30%, rgba(79, 142, 247, .42), rgba(79, 142, 247, 0) 65%);
+      opacity: .45;
+      transform: rotate(12deg);
+    }
+    .hero-left { display:flex; align-items:center; gap: 16px; position: relative; z-index: 1; }
+    .hero-icon {
+      width: 56px; height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(79, 142, 247, .22), rgba(155, 89, 182, .18));
+      border: 1px solid rgba(255,255,255,.10);
+      display:flex; align-items:center; justify-content:center;
+      color: var(--blue);
+    }
+    .hero-icon svg { width: 26px; height: 26px; }
+    .hero-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .hero-sub { color: rgba(255,255,255,.65); font-size: 13px; font-weight: 700; }
+    .hero-right { display:flex; gap: 10px; flex-wrap: wrap; position: relative; z-index: 1; align-items:center; }
+    .mini-badge {
+      display:inline-flex; align-items:center; gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(10,16,32,.45);
+      color: rgba(255,255,255,.88);
+      font-weight: 800;
+      font-size: 12px;
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+    .mini-badge svg { width: 16px; height: 16px; }
+    .filters-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .filters-row select, .filters-row input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      min-width: 180px;
+    }
+    .filters-row .btn { padding: 9px 12px; }
+    .table-wrap thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(14, 18, 34, .96);
+      backdrop-filter: blur(10px);
+      z-index: 2;
+    }
+    #empTable tbody tr:hover td { background: rgba(255,255,255,.03); }
+    .actions-cell { display:flex; flex-wrap:wrap; gap: 8px; justify-content: flex-end; }
+    .emp-name-link { color: rgba(255,255,255,.90); text-decoration: none; font-weight: 800; }
+    .emp-name-link:hover { color: var(--blue); text-decoration: underline; }
+    .muted { color: rgba(255,255,255,.65); font-weight: 700; font-size: 12px; }
+    @media (max-width: 700px) {
+      .filters-row select, .filters-row input { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+          </svg>
+        </div>
+        <span class="brand-name">نظام <span class="accent">الموارد</span></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <a class="btn btn-ghost" href="/">الشهر</a>
+        <a class="btn btn-ghost" href="/upload">رفع ملف</a>
+        <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-primary" href="/employees-page">الموظفين</a>
+        <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
+        <a class="btn btn-danger" href="/logout">خروج</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="page-hero">
+      <div class="hero-left">
+        <div class="hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div>
+          <div class="hero-title">الموظفين</div>
+          <div class="hero-sub">إضافة / تعديل / حذف، وفتح ملف الموظف بكل التفاصيل</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <span class="mini-badge" title="عدد الموظفين">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span id="empCountText">—</span>
+        </span>
+        <span class="mini-badge" title="نشط / غير نشط">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M8.5 12l2.3 2.3L15.5 9.6"></path>
+          </svg>
+          <span dir="ltr"><span id="activeCountText">—</span> / <span id="inactiveCountText">—</span></span>
+        </span>
+        <button class="btn btn-primary" type="button" onclick="openEmployeeModal()">إضافة موظف</button>
+        <a class="btn btn-ghost" href="/upload">رفع ملف إكسل</a>
+        <button class="btn btn-ghost" type="button" onclick="loadEmployees()">تحديث</button>
+      </div>
+    </div>
+
+    <section class="table-card" style="margin-top:16px">
+      <div class="table-header" style="flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2 class="table-title">قائمة الموظفين</h2>
+          <span class="badge" id="rowCount">0</span>
+        </div>
+        <div class="filters-row">
+          <input type="text" id="searchInput" placeholder="بحث بالاسم أو الكود أو الموبايل…" />
+          <select id="deptFilter" onchange="loadEmployees()">
+            <option value="">كل الإدارات</option>
+          </select>
+          <select id="statusFilter" onchange="loadEmployees()">
+            <option value="">كل الحالات</option>
+            <option value="active">نشط</option>
+            <option value="inactive">غير نشط</option>
+          </select>
+          <button class="btn btn-ghost" type="button" onclick="clearFilters()">مسح</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="empTable">
+          <thead>
+            <tr>
+              <th>الكود</th>
+              <th>الاسم</th>
+              <th>الإدارة</th>
+              <th>المسمى الوظيفي</th>
+              <th>الحالة</th>
+              <th style="text-align:end">إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="empBody">
+            <tr><td colspan="6" class="loading-row">جارٍ التحميل…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Employee Modal -->
+  <div class="modal-overlay" id="empModal">
+    <div class="modal" style="max-width:760px">
+      <div class="modal-header">
+        <span class="modal-title">إضافة موظف</span>
+        <button class="modal-close" onclick="closeModal('empModal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="form-body" style="max-height:70vh;overflow:auto">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الكود (اختياري)</label><input type="text" id="empCode" placeholder="مثلاً: 1001" /></div>
+          <div class="form-row"><label>الاسم</label><input type="text" id="empName" placeholder="اسم الموظف" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الإدارة</label><input type="text" id="empDept" placeholder="مثلاً: إدارة الاستثمار" /></div>
+          <div class="form-row"><label>الحالة</label>
+            <select id="empStatus">
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المسمى الوظيفي</label><input type="text" id="empJobTitle" placeholder="مثلاً: محاسب" /></div>
+          <div class="form-row"><label>الموبايل</label><input type="text" id="empPhone" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>تاريخ التعيين</label><input type="date" id="empJoinDate" /></div>
+          <div class="form-row"><label>تاريخ انتهاء العقد</label><input type="date" id="empContractEndDate" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>عدد الراحات</label><input type="number" id="empRests" min="0" step="1" value="0" /></div>
+          <div class="form-row"><label>IBAN</label><input type="text" id="empIban" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>رصيد سنوية (يوم)</label><input type="number" id="empAllowAnnual" min="0" step="0.5" value="0" /></div>
+          <div class="form-row"><label>رصيد عارضة (يوم)</label><input type="number" id="empAllowCasual" min="0" step="0.5" value="0" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الرقم القومي</label><input type="text" id="empNationalId" /></div>
+          <div class="form-row"><label>رقم التأمين</label><input type="text" id="empInsurance" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المؤهل</label><input type="text" id="empEducation" /></div>
+          <div class="form-row"><label>الجامعة</label><input type="text" id="empUniversity" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الحالة الاجتماعية</label><input type="text" id="empMaritalStatus" /></div>
+          <div class="form-row"><label>الديانة</label><input type="text" id="empReligion" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المحافظة</label><input type="text" id="empGovernorate" /></div>
+          <div class="form-row"><label>المركز/المدينة</label><input type="text" id="empCity" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المنطقة/القرية</label><input type="text" id="empArea" /></div>
+          <div class="form-row"><label>العنوان</label><input type="text" id="empAddress" /></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('empModal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="submitEmployee()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script>
+    function getParam(name) {
+      const v = new URLSearchParams(window.location.search).get(name);
+      return v == null || v === '' ? null : v;
+    }
+
+    const idsParam = getParam('ids');
+
+    let deptList = [];
+    let searchTimer = null;
+
+    function showToast(msg, type='success') {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.className = `toast ${type} show`;
+      setTimeout(() => { t.className = 'toast'; }, 3500);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(o => {
+      o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+    });
+
+    async function loadDepartments() {
+      try {
+        const r = await fetch('/departments');
+        deptList = r.ok ? await r.json() : [];
+        const sel = document.getElementById('deptFilter');
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">كل الإدارات</option>' + deptList.map(d => `<option value="${String(d).replaceAll('"','&quot;')}">${d}</option>`).join('');
+        sel.value = prev;
+      } catch {
+        deptList = [];
+      }
+    }
+
+    function renderRow(e) {
+      const statusTxt = (e.status || '') === 'inactive' ? 'غير نشط' : 'نشط';
+      const statusCls = (e.status || '') === 'inactive' ? 'pill pill-inactive' : 'pill pill-active';
+      const code = e.employee_code || '—';
+      return `<tr>
+        <td><span dir="ltr">${code}</span></td>
+        <td><a class="emp-name-link" href="/employee-page/${e.id}">${e.name || '—'}</a></td>
+        <td>${e.dept || '—'}</td>
+        <td>${e.job_title || '—'}</td>
+        <td><span class="${statusCls}">${statusTxt}</span></td>
+        <td><div class="actions-cell">
+          <a class="btn btn-ghost" href="/employee-page/${e.id}">ملف الموظف</a>
+        </div></td>
+      </tr>`;
+    }
+
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('deptFilter').value = '';
+      document.getElementById('statusFilter').value = '';
+      loadEmployees();
+    }
+
+    async function loadEmployees() {
+      const search = (document.getElementById('searchInput').value || '').trim();
+      const dept = document.getElementById('deptFilter').value || '';
+      const status = document.getElementById('statusFilter').value || '';
+      const qs = new URLSearchParams();
+      if (idsParam) qs.set('ids', idsParam);
+      if (search) qs.set('search', search);
+      if (dept) qs.set('dept', dept);
+      if (status) qs.set('status', status);
+
+      document.getElementById('empBody').innerHTML = '<tr><td colspan="6" class="loading-row">جارٍ التحميل…</td></tr>';
+      try {
+        const r = await fetch(`/employees?${qs.toString()}`);
+        const rows = r.ok ? await r.json() : [];
+        const active = rows.filter(x => (x.status || 'active') !== 'inactive').length;
+        const inactive = rows.length - active;
+        document.getElementById('rowCount').textContent = rows.length;
+        document.getElementById('empCountText').textContent = `${rows.length} موظف`;
+        document.getElementById('activeCountText').textContent = String(active);
+        document.getElementById('inactiveCountText').textContent = String(inactive);
+        document.getElementById('empBody').innerHTML = rows.length
+          ? rows.map(renderRow).join('')
+          : '<tr><td colspan="6" class="loading-row">لا توجد نتائج.</td></tr>';
+      } catch {
+        document.getElementById('empBody').innerHTML = '<tr><td colspan="6" class="loading-row">فشل تحميل البيانات.</td></tr>';
+        showToast('فشل تحميل البيانات','error');
+      }
+    }
+
+    function openEmployeeModal() {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      set('empCode', '');
+      set('empName', '');
+      set('empDept', document.getElementById('deptFilter').value || '');
+      set('empJobTitle', '');
+      set('empStatus', 'active');
+      set('empPhone', '');
+      set('empJoinDate', '');
+      set('empContractEndDate', '');
+      set('empRests', '0');
+      set('empAllowAnnual', '0');
+      set('empAllowCasual', '0');
+      set('empNationalId', '');
+      set('empInsurance', '');
+      set('empEducation', '');
+      set('empUniversity', '');
+      set('empMaritalStatus', '');
+      set('empReligion', '');
+      set('empGovernorate', '');
+      set('empCity', '');
+      set('empArea', '');
+      set('empIban', '');
+      set('empAddress', '');
+      openModal('empModal');
+    }
+
+    async function submitEmployee() {
+      const name = (document.getElementById('empName').value || '').trim();
+      const dept = (document.getElementById('empDept').value || '').trim();
+      if (!name) { showToast('الرجاء إدخال اسم الموظف','error'); return; }
+      if (!dept) { showToast('الرجاء إدخال الإدارة','error'); return; }
+      const body = {
+        dept,
+        name,
+        employee_code: (document.getElementById('empCode').value || '').trim() || null,
+        job_title: (document.getElementById('empJobTitle').value || '').trim() || null,
+        status: document.getElementById('empStatus').value || 'active',
+        phone: (document.getElementById('empPhone').value || '').trim() || null,
+        join_date: (document.getElementById('empJoinDate').value || '').trim() || null,
+        contract_end_date: (document.getElementById('empContractEndDate').value || '').trim() || null,
+        rests: Number(document.getElementById('empRests').value || 0),
+        leave_allowance_annual_days: Number(document.getElementById('empAllowAnnual').value || 0),
+        leave_allowance_casual_days: Number(document.getElementById('empAllowCasual').value || 0),
+        national_id: (document.getElementById('empNationalId').value || '').trim() || null,
+        insurance_number: (document.getElementById('empInsurance').value || '').trim() || null,
+        education: (document.getElementById('empEducation').value || '').trim() || null,
+        university: (document.getElementById('empUniversity').value || '').trim() || null,
+        marital_status: (document.getElementById('empMaritalStatus').value || '').trim() || null,
+        religion: (document.getElementById('empReligion').value || '').trim() || null,
+        governorate: (document.getElementById('empGovernorate').value || '').trim() || null,
+        city: (document.getElementById('empCity').value || '').trim() || null,
+        area: (document.getElementById('empArea').value || '').trim() || null,
+        address: (document.getElementById('empAddress').value || '').trim() || null,
+        iban: (document.getElementById('empIban').value || '').trim() || null,
+      };
+      if (!Number.isFinite(body.rests) || body.rests < 0) { showToast('عدد الراحات غير صحيح','error'); return; }
+      if (!Number.isFinite(body.leave_allowance_annual_days) || body.leave_allowance_annual_days < 0) { showToast('رصيد السنوية غير صحيح','error'); return; }
+      if (!Number.isFinite(body.leave_allowance_casual_days) || body.leave_allowance_casual_days < 0) { showToast('رصيد العارضة غير صحيح','error'); return; }
+      const r = await fetch('/employees', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
+      closeModal('empModal');
+      showToast('تم إضافة الموظف ✓');
+      await loadDepartments();
+      await loadEmployees();
+    }
+
+    (async function init() {
+      const searchEl = document.getElementById('searchInput');
+      searchEl.addEventListener('input', () => {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => loadEmployees(), 250);
+      });
+      await loadDepartments();
+      await loadEmployees();
+    })();
+  </script>
+</body>
+</html>

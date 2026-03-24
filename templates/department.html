@@ -180,8 +180,8 @@
     #empTable thead th:nth-child(4),
     #empTable thead th:nth-child(5),
     #empTable thead th:nth-child(6),
-    #empTable thead th:nth-child(7) { width: 92px; }
-    #empTable thead th:nth-child(8) { width: 260px; }
+    #empTable thead th:nth-child(7) { width: 5px; }
+    #empTable thead th:nth-child(8) { width: 300px; }
     #empTable thead th:nth-child(4),
     #empTable thead th:nth-child(5),
     #empTable thead th:nth-child(6),
@@ -223,6 +223,7 @@
         <a class="btn btn-ghost" href="/">الشهر</a>
         <a class="btn btn-ghost" href="/upload">رفع ملف</a>
         <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-ghost" href="/employees-page">الموظفين</a>
         <a class="btn btn-primary" href="/departments-page">الإدارات</a>
         <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
@@ -260,6 +261,7 @@
           </svg>
           <span id="deptCountText">—</span>
         </span>
+        <button class="btn btn-primary" type="button" onclick="openEmployeeModal()">إضافة موظف</button>
         <button class="btn btn-ghost" type="button" onclick="loadEmployees()">تحديث</button>
       </div>
     </div>
@@ -298,6 +300,70 @@
       </div>
     </section>
   </main>
+
+  <!-- Employee Modal -->
+  <div class="modal-overlay" id="empModal">
+    <div class="modal" style="max-width:760px">
+      <div class="modal-header">
+        <span class="modal-title">إضافة موظف</span>
+        <button class="modal-close" onclick="closeModal('empModal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="form-body" style="max-height:70vh;overflow:auto">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الكود (اختياري)</label><input type="text" id="empCode" placeholder="مثلاً: 1001" /></div>
+          <div class="form-row"><label>الاسم</label><input type="text" id="empName" placeholder="اسم الموظف" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المسمى الوظيفي</label><input type="text" id="empJobTitle" placeholder="مثلاً: محاسب" /></div>
+          <div class="form-row"><label>الحالة</label>
+            <select id="empStatus">
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الموبايل</label><input type="text" id="empPhone" /></div>
+          <div class="form-row"><label>تاريخ التعيين</label><input type="date" id="empJoinDate" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>تاريخ انتهاء العقد</label><input type="date" id="empContractEndDate" /></div>
+          <div class="form-row"><label>عدد الراحات</label><input type="number" id="empRests" min="0" step="1" value="0" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>رصيد سنوية (يوم)</label><input type="number" id="empAllowAnnual" min="0" step="0.5" value="0" /></div>
+          <div class="form-row"><label>رصيد عارضة (يوم)</label><input type="number" id="empAllowCasual" min="0" step="0.5" value="0" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الرقم القومي</label><input type="text" id="empNationalId" /></div>
+          <div class="form-row"><label>رقم التأمين</label><input type="text" id="empInsurance" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المؤهل</label><input type="text" id="empEducation" /></div>
+          <div class="form-row"><label>الجامعة</label><input type="text" id="empUniversity" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>الحالة الاجتماعية</label><input type="text" id="empMaritalStatus" /></div>
+          <div class="form-row"><label>الديانة</label><input type="text" id="empReligion" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المحافظة</label><input type="text" id="empGovernorate" /></div>
+          <div class="form-row"><label>المركز/المدينة</label><input type="text" id="empCity" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-row"><label>المنطقة/القرية</label><input type="text" id="empArea" /></div>
+          <div class="form-row"><label>IBAN</label><input type="text" id="empIban" /></div>
+        </div>
+        <div class="form-row"><label>العنوان</label><textarea id="empAddress" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('empModal')">إلغاء</button>
+        <button class="btn btn-primary" onclick="submitEmployee()">حفظ</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Leave Modal -->
   <div class="modal-overlay" id="leaveModal">
@@ -545,6 +611,32 @@
       o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
     });
 
+    function openEmployeeModal() {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      set('empCode', '');
+      set('empName', '');
+      set('empJobTitle', '');
+      set('empStatus', 'active');
+      set('empPhone', '');
+      set('empJoinDate', '');
+      set('empContractEndDate', '');
+      set('empRests', '0');
+      set('empAllowAnnual', '0');
+      set('empAllowCasual', '0');
+      set('empNationalId', '');
+      set('empInsurance', '');
+      set('empEducation', '');
+      set('empUniversity', '');
+      set('empMaritalStatus', '');
+      set('empReligion', '');
+      set('empGovernorate', '');
+      set('empCity', '');
+      set('empArea', '');
+      set('empIban', '');
+      set('empAddress', '');
+      openModal('empModal');
+    }
+
     function openLeaveModal(empId, type) {
       document.getElementById('leaveEmpId').value = empId;
       document.getElementById('leaveType').value = type;
@@ -670,6 +762,47 @@
         return;
       }
       closeModal('deductModal'); showToast('تم إضافة الخصم ✓'); await loadEmployees();
+    }
+
+    async function submitEmployee() {
+      const name = (document.getElementById('empName').value || '').trim();
+      if (!name) { showToast('الرجاء إدخال اسم الموظف','error'); return; }
+      const body = {
+        dept: deptName,
+        name,
+        employee_code: (document.getElementById('empCode').value || '').trim() || null,
+        job_title: (document.getElementById('empJobTitle').value || '').trim() || null,
+        status: document.getElementById('empStatus').value || 'active',
+        phone: (document.getElementById('empPhone').value || '').trim() || null,
+        join_date: (document.getElementById('empJoinDate').value || '').trim() || null,
+        contract_end_date: (document.getElementById('empContractEndDate').value || '').trim() || null,
+        rests: Number(document.getElementById('empRests').value || 0),
+        leave_allowance_annual_days: Number(document.getElementById('empAllowAnnual').value || 0),
+        leave_allowance_casual_days: Number(document.getElementById('empAllowCasual').value || 0),
+        national_id: (document.getElementById('empNationalId').value || '').trim() || null,
+        insurance_number: (document.getElementById('empInsurance').value || '').trim() || null,
+        education: (document.getElementById('empEducation').value || '').trim() || null,
+        university: (document.getElementById('empUniversity').value || '').trim() || null,
+        marital_status: (document.getElementById('empMaritalStatus').value || '').trim() || null,
+        religion: (document.getElementById('empReligion').value || '').trim() || null,
+        governorate: (document.getElementById('empGovernorate').value || '').trim() || null,
+        city: (document.getElementById('empCity').value || '').trim() || null,
+        area: (document.getElementById('empArea').value || '').trim() || null,
+        address: (document.getElementById('empAddress').value || '').trim() || null,
+        iban: (document.getElementById('empIban').value || '').trim() || null,
+      };
+      if (!Number.isFinite(body.rests) || body.rests < 0) { showToast('عدد الراحات غير صحيح','error'); return; }
+      if (!Number.isFinite(body.leave_allowance_annual_days) || body.leave_allowance_annual_days < 0) { showToast('رصيد السنوية غير صحيح','error'); return; }
+      if (!Number.isFinite(body.leave_allowance_casual_days) || body.leave_allowance_casual_days < 0) { showToast('رصيد العارضة غير صحيح','error'); return; }
+      const r = await fetch('/employees', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
+      closeModal('empModal');
+      showToast('تم إضافة الموظف ✓');
+      await loadEmployees();
     }
 
     function renderRow(e) {

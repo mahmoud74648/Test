@@ -195,6 +195,90 @@
       box-shadow: 0 0 0 3px rgba(79, 142, 247, .18);
     }
 
+    #uploadType {
+      width: 100%;
+      background: rgba(28, 32, 48, .92);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius-sm);
+      color: rgba(255,255,255,.92);
+      padding: 10px 12px;
+      outline: none;
+      font-family: inherit;
+      font-weight: 800;
+    }
+
+    @media (min-width: 521px) {
+      #uploadType { display: none; }
+    }
+
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 980px) {
+      .type-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 520px) {
+      .type-grid { display: none; }
+    }
+
+    .type-card {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(10, 16, 32, .42);
+      border-radius: var(--radius);
+      padding: 12px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      text-align: right;
+      color: rgba(255,255,255,.92);
+      transition: transform .16s, border-color .16s, background .16s, box-shadow .16s;
+    }
+
+    .type-card:hover { transform: translateY(-1px); border-color: rgba(79,142,247,.45); background: rgba(10, 16, 32, .55); }
+    .type-card.active { border-color: rgba(79,142,247,.75); background: rgba(79, 142, 247, .10); box-shadow: 0 0 0 3px rgba(79,142,247,.12); }
+    .type-card:focus { outline: none; box-shadow: 0 0 0 3px rgba(79,142,247,.18); }
+
+    .type-ico {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,.92);
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      flex-shrink: 0;
+    }
+    .type-ico svg { width: 18px; height: 18px; }
+    .type-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .type-title { font-weight: 900; font-size: 12px; }
+    .type-sub { color: rgba(255,255,255,.62); font-weight: 800; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .collapsible {
+      max-height: 220px;
+      opacity: 1;
+      transform: translateY(0);
+      transition: max-height .18s ease, opacity .18s ease, transform .18s ease, margin .18s ease, padding .18s ease, border-width .18s ease;
+      overflow: hidden;
+    }
+    .collapsible.is-hidden {
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(-4px);
+      margin-top: -8px;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      border-width: 0 !important;
+      pointer-events: none;
+    }
+
     .drop {
       border: 1px dashed rgba(255,255,255,.18);
       border-radius: var(--radius);
@@ -312,6 +396,7 @@
         <a class="btn btn-ghost" href="/">الشهر</a>
         <a class="btn btn-primary" href="/upload">رفع ملف</a>
         <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-ghost" href="/employees-page">الموظفين</a>
         <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
         <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
@@ -321,8 +406,8 @@
   <main class="main" >
     <section class="upload-hero">
       <div style="position:relative;z-index:1">
-        <h1 class="hero-title">رفع ملف الحضور اليومي</h1>
-        <p class="hero-sub">اختر التاريخ ثم ارفع ملف الإكسل. بعد الاستيراد سيتم تحويلك تلقائياً إلى الداشبورد.</p>
+        <h1 class="hero-title">رفع ملفات الإكسل</h1>
+        <p class="hero-sub">اختر نوع الملف: موظفين / إذن / إجازات / حضور يومي.</p>
       </div>
       <div class="hero-badges">
         <span class="mini-badge" id="selectedDateBadge" title="التاريخ المحدد">
@@ -333,6 +418,13 @@
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
           <span id="selectedDateText">—</span>
+        </span>
+        <span class="mini-badge" id="typeBadge" title="نوع الملف">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span id="typeBadgeText">—</span>
         </span>
         <span class="status-badge wait" id="uploadStatus" aria-live="polite">جاهز</span>
       </div>
@@ -354,6 +446,73 @@
 
         <div class="panel-body">
           <div class="field">
+            <label for="uploadType">
+              <span>نوع الملف</span>
+              <small>اختر نوع البيانات المطلوب رفعها</small>
+            </label>
+            <div class="type-grid" id="typeGrid" aria-label="اختيار نوع الملف">
+              <button class="type-card" type="button" data-type="attendance">
+                <span class="type-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </span>
+                <span class="type-meta">
+                  <span class="type-title">حضور يومي</span>
+                  <span class="type-sub">يتطلب اختيار تاريخ</span>
+                </span>
+              </button>
+              <button class="type-card" type="button" data-type="employees">
+                <span class="type-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </span>
+                <span class="type-meta">
+                  <span class="type-title">موظفين</span>
+                  <span class="type-sub">إضافة/تحديث البيانات</span>
+                </span>
+              </button>
+              <button class="type-card" type="button" data-type="permissions">
+                <span class="type-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                </span>
+                <span class="type-meta">
+                  <span class="type-title">إذن</span>
+                  <span class="type-sub">employee_code + date + hours</span>
+                </span>
+              </button>
+              <button class="type-card" type="button" data-type="leaves">
+                <span class="type-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2v20"></path>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                </span>
+                <span class="type-meta">
+                  <span class="type-title">إجازات</span>
+                  <span class="type-sub">employee_code + date + days</span>
+                </span>
+              </button>
+            </div>
+            <select id="uploadType">
+              <option value="attendance">حضور يومي</option>
+              <option value="employees">بيانات الموظفين</option>
+              <option value="permissions">إذن</option>
+              <option value="leaves">إجازات</option>
+            </select>
+          </div>
+
+          <div class="field collapsible" id="dateField">
             <label for="selectedDate">
               <span>التاريخ</span>
               <small>يُفضّل مطابقته لتاريخ الملف</small>
@@ -385,7 +544,7 @@
             </label>
           </div>
 
-          <label class="hint-card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
+          <label class="hint-card collapsible" id="resetDbField" style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer">
             <span style="display:flex;flex-direction:column;gap:3px">
               <span style="font-weight:900;color:rgba(255,255,255,.9);font-size:13px">إعادة تهيئة قاعدة البيانات</span>
               <span style="color:rgba(255,255,255,.60);font-weight:700;font-size:12px">للاستخدام عند الإعداد الأول فقط</span>
@@ -394,7 +553,7 @@
           </label>
 
           <div class="actions">
-            <button class="btn btn-primary" onclick="uploadExcel()">رفع </button>
+            <button class="btn btn-primary" onclick="uploadExcel()">رفع</button>
             <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
           </div>
 
@@ -414,6 +573,7 @@
           </h2>
         </div>
         <div class="panel-body">
+          <div class="hint-card" id="typeHintCard"></div>
           <div class="hint-card">
             <div class="hint-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -423,9 +583,9 @@
               قبل الرفع
             </div>
             <ul class="hint-list">
-              <li class="hint-item"><span class="hint-dot"></span><span>اختر تاريخ اليوم الصحيح.</span></li>
-              <li class="hint-item"><span class="hint-dot"></span><span>يفضل أن يكون الملف بنفس تنسيق test0-hik.</span></li>
-              <li class="hint-item"><span class="hint-dot"></span><span>عند اختلاف تواريخ الملف سيتم تنبيهك بالتواريخ الموجودة.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>في الحضور اليومي: اختر تاريخ اليوم الصحيح.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>في الموظفين/الإذن/الإجازات: التاريخ موجود داخل الملف.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>استخدم الكود (employee_code) في الملفات لربط السجلات بالموظفين.</span></li>
             </ul>
           </div>
 
@@ -438,7 +598,7 @@
               بعد الرفع
             </div>
             <ul class="hint-list">
-              <li class="hint-item"><span class="hint-dot"></span><span>سيتم تحويلك إلى الداشبورد تلقائياً.</span></li>
+              <li class="hint-item"><span class="hint-dot"></span><span>في الحضور: سيتم تحويلك إلى الداشبورد تلقائياً.</span></li>
               <li class="hint-item"><span class="hint-dot"></span><span>يمكنك الرجوع إلى لوحة الشهر لمراجعة حالة الرفع.</span></li>
             </ul>
           </div>
@@ -456,6 +616,12 @@
     const fileInput = document.getElementById('excelFile');
     const fileName = document.getElementById('fileName');
     const dropZone = document.getElementById('dropZone');
+    const uploadType = document.getElementById('uploadType');
+    const dateField = document.getElementById('dateField');
+    const resetDbField = document.getElementById('resetDbField');
+    const typeBadgeText = document.getElementById('typeBadgeText');
+    const typeGrid = document.getElementById('typeGrid');
+    const typeHintCard = document.getElementById('typeHintCard');
 
     function show(msg, type = 'success') {
       toast.textContent = msg;
@@ -501,6 +667,7 @@
 
     dateInput.addEventListener('change', () => setSelectedDateUI(dateInput.value));
     fileInput.addEventListener('change', () => setFileUI(fileInput.files[0]));
+    uploadType.addEventListener('change', () => applyUploadTypeUI());
 
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -521,31 +688,165 @@
       const f = fileInput.files[0];
       if (!f) { show('اختر ملف الإكسل أولاً.', 'error'); return; }
       const selected = dateInput.value;
-      if (!selected) { show('اختر التاريخ أولاً.', 'error'); return; }
+      const kind = uploadType.value || 'attendance';
       const fd = new FormData();
       fd.append('file', f);
-      fd.append('reset_db', document.getElementById('resetDb').checked ? 'true' : 'false');
+      if (kind === 'attendance') {
+        if (!selected) { show('اختر التاريخ أولاً.', 'error'); return; }
+        fd.append('reset_db', document.getElementById('resetDb').checked ? 'true' : 'false');
+      }
       setStatus('جاري الرفع...', 'wait');
       try {
-        const r = await fetch('/import/upload', { method: 'POST', body: fd });
+        const url =
+          kind === 'employees' ? '/import/employees/upload' :
+          kind === 'permissions' ? '/import/permissions/upload' :
+          kind === 'leaves' ? '/import/leaves/upload' :
+          '/import/upload';
+        const r = await fetch(url, { method: 'POST', body: fd });
         if (!r.ok) throw new Error(await r.text());
         const res = await r.json();
         setStatus('تم الاستيراد', 'ok');
-        const dates = (res.distinct_dates || []).map(String);
-        if (dates.length && !dates.includes(selected)) {
-          show(`تم الاستيراد: ${res.attendance_rows_upserted} سجل، لكن تواريخ الملف هي: ${dates.join('، ')}`, 'error');
+        if (kind === 'attendance') {
+          const dates = (res.distinct_dates || []).map(String);
+          if (dates.length && !dates.includes(selected)) {
+            show(`تم الاستيراد: ${res.attendance_rows_upserted} سجل، لكن تواريخ الملف هي: ${dates.join('، ')}`, 'error');
+            return;
+          }
+          show(`تم استيراد ${res.attendance_rows_upserted} سجل لتاريخ ${selected}`);
+          setTimeout(() => { window.location.href = `/dashboard?date=${encodeURIComponent(selected)}`; }, 600);
           return;
         }
-        show(`تم استيراد ${res.attendance_rows_upserted} سجل لتاريخ ${selected}`);
-        setTimeout(() => { window.location.href = `/dashboard?date=${encodeURIComponent(selected)}`; }, 600);
+        if (kind === 'employees') {
+          const up = Number(res.employees_upserted || 0);
+          const created = Number(res.employees_created || 0);
+          const updated = Number(res.employees_updated || 0);
+          const sk = Number(res.rows_skipped || 0);
+          const total = Number(res.rows_total || 0);
+          if (up === 0) {
+            const cols = Array.isArray(res.detected_columns) ? res.detected_columns.join('، ') : '';
+            const missCode = Number(res.skipped_missing_code || 0);
+            const missNameDept = Number(res.skipped_missing_name_or_dept || 0);
+            const missCodeRows = Array.isArray(res.skipped_missing_code_rows) && res.skipped_missing_code_rows.length
+              ? ` | صفوف بدون كود: ${res.skipped_missing_code_rows.join('، ')}`
+              : '';
+            const missNameDeptRows = Array.isArray(res.skipped_missing_name_or_dept_rows) && res.skipped_missing_name_or_dept_rows.length
+              ? ` | صفوف بدون اسم/إدارة: ${res.skipped_missing_name_or_dept_rows.join('، ')}`
+              : '';
+            if (total > 0 && sk === 0) {
+              show(`تم فحص الملف بنجاح لكن لا توجد تغييرات جديدة (${total} صف). لو الموظفين موجودين بالفعل بنفس البيانات فده طبيعي.`, 'ok');
+            } else {
+              show(`لم يتم إضافة أي موظف. تأكد من الأعمدة: employee_code (أو الرقم القومي) + name + dept${cols ? ` (الموجود: ${cols})` : ''} | skipped=${sk} | missing_code=${missCode} | missing_name_or_dept=${missNameDept}${missCodeRows}${missNameDeptRows}`, 'error');
+            }
+          } else {
+            show(`تم استيراد الموظفين: ${up} (جديد: ${created} | تحديث: ${updated} | تخطي: ${sk})`);
+          }
+          setTimeout(() => { window.location.href = `/employees-page`; }, 600);
+          return;
+        }
+        if (kind === 'permissions') {
+          const affected = Array.isArray(res.affected_employee_ids) ? res.affected_employee_ids : [];
+          show(`تم استيراد الأذونات: ${res.permissions_inserted || 0} (تخطي: ${res.rows_skipped || 0})`);
+          if (affected.length === 1) {
+            const empId = affected[0];
+            setTimeout(() => { window.location.href = `/employee-page/${encodeURIComponent(empId)}?tab=perms`; }, 600);
+          } else {
+            const ids = affected.length ? `?ids=${encodeURIComponent(affected.join(','))}` : '';
+            setTimeout(() => { window.location.href = `/employees-page${ids}`; }, 600);
+          }
+          return;
+        }
+        if (kind === 'leaves') {
+          const affected = Array.isArray(res.affected_employee_ids) ? res.affected_employee_ids : [];
+          show(`تم استيراد الإجازات: ${res.leaves_inserted || 0} (تخطي: ${res.rows_skipped || 0})`);
+          if (affected.length === 1) {
+            const empId = affected[0];
+            setTimeout(() => { window.location.href = `/employee-page/${encodeURIComponent(empId)}?tab=leaves`; }, 600);
+          } else {
+            const ids = affected.length ? `?ids=${encodeURIComponent(affected.join(','))}` : '';
+            setTimeout(() => { window.location.href = `/employees-page${ids}`; }, 600);
+          }
+          return;
+        }
       } catch (e) {
         setStatus('فشل', 'miss');
-        show('فشل الاستيراد. تأكد أن الملف بنفس تنسيق test0-hik.', 'error');
+        show('فشل الاستيراد. تأكد من تنسيق الملف والأعمدة.', 'error');
+      }
+    }
+
+    function applyUploadTypeUI() {
+      const kind = uploadType.value || 'attendance';
+      const isAttendance = kind === 'attendance';
+      const typeLabel =
+        kind === 'employees' ? 'موظفين' :
+        kind === 'permissions' ? 'إذن' :
+        kind === 'leaves' ? 'إجازات' :
+        'حضور يومي';
+      if (typeBadgeText) typeBadgeText.textContent = typeLabel;
+      if (dateBadge) dateBadge.style.display = isAttendance ? '' : 'none';
+      if (dateField) dateField.classList.toggle('is-hidden', !isAttendance);
+      if (resetDbField) resetDbField.classList.toggle('is-hidden', !isAttendance);
+
+      if (typeGrid) {
+        typeGrid.querySelectorAll('.type-card').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-type') === kind);
+        });
+      }
+
+      if (typeHintCard) {
+        const common = `<div class="hint-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4" />
+            <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+          </svg>
+          أعمدة مطلوبة
+        </div>`;
+        const body =
+          kind === 'employees'
+            ? `<ul class="hint-list">
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">employee_code</span> (مهم للربط)</span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">name</span> و <span dir="ltr">dept</span></span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span>أي أعمدة إضافية سيتم تحديثها لو موجودة</span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span>إضافة/تحديث الموظفين تتم من ملف الموظفين فقط</span></li>
+              </ul>`
+            : kind === 'permissions'
+            ? `<ul class="hint-list">
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">employee_code</span> + <span dir="ltr">date</span> + <span dir="ltr">hours</span></span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">note</span> اختياري</span></li>
+              </ul>`
+            : kind === 'leaves'
+            ? `<ul class="hint-list">
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">employee_code</span> + <span dir="ltr">date</span> + <span dir="ltr">days</span></span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">leave_type</span>: <span dir="ltr">annual</span> / <span dir="ltr">casual</span></span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span><span dir="ltr">note</span> اختياري</span></li>
+              </ul>`
+            : `<ul class="hint-list">
+                <li class="hint-item"><span class="hint-dot"></span><span>اختر تاريخ اليوم الصحيح قبل الرفع</span></li>
+                <li class="hint-item"><span class="hint-dot"></span><span>الملف يفضل بنفس تنسيق <span dir="ltr">test0-hik</span></span></li>
+              </ul>`;
+        typeHintCard.innerHTML = common + body;
+      }
+
+      if (!isAttendance) {
+        dateInput.value = '';
+        setSelectedDateUI('');
+        document.getElementById('resetDb').checked = false;
       }
     }
     initDate();
+    applyUploadTypeUI();
     setStatus('جاهز', 'wait');
     setFileUI(fileInput.files[0]);
+
+    if (typeGrid) {
+      typeGrid.querySelectorAll('.type-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const kind = btn.getAttribute('data-type');
+          if (!kind) return;
+          uploadType.value = kind;
+          applyUploadTypeUI();
+        });
+      });
+    }
   </script>
 </body>
 </html>

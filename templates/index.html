@@ -99,33 +99,22 @@
     }
 
     #empTable.attendance-table .col-name {
-      width: 220px;
+      width: 210px;
     }
 
     #empTable.attendance-table .col-dept {
-      width: 260px;
+      width: 240px;
     }
 
     #empTable.attendance-table .col-date {
       width: 120px;
     }
 
-    #empTable.attendance-table .col-records {
-      width: 240px;
-    }
+    #empTable.attendance-table .col-io { width: 240px; }
 
     #empTable.attendance-table .col-work {
-      width: 140px;
+      width: 120px;
       text-align: center;
-    }
-
-    #empTable.attendance-table td.col-records {
-      overflow: visible;
-      text-overflow: clip;
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      line-height: 1.45;
     }
 
     #empTable.attendance-table th.col-id,
@@ -142,8 +131,10 @@
 
     #empTable.attendance-table th.col-date,
     #empTable.attendance-table td.col-date,
-    #empTable.attendance-table th.col-records,
-    #empTable.attendance-table td.col-records,
+    #empTable.attendance-table th.col-in,
+    #empTable.attendance-table td.col-in,
+    #empTable.attendance-table th.col-out,
+    #empTable.attendance-table td.col-out,
     #empTable.attendance-table th.col-work,
     #empTable.attendance-table td.col-work {
       direction: ltr;
@@ -153,6 +144,8 @@
 
     #empTable.attendance-table th.col-date,
     #empTable.attendance-table td.col-date,
+    #empTable.attendance-table th.col-io,
+    #empTable.attendance-table td.col-io,
     #empTable.attendance-table th.col-work,
     #empTable.attendance-table td.col-work {
       text-align: center;
@@ -179,6 +172,7 @@
         <a class="btn btn-ghost" href="/">الشهر</a>
         <a class="btn btn-ghost" href="/upload">رفع ملف</a>
         <a class="btn btn-primary" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-ghost" href="/employees-page">الموظفين</a>
         <a class="btn btn-ghost" href="/departments-page">الإدارات</a>
         <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
@@ -291,7 +285,7 @@
               <th class="col-name">الاسم</th>
               <th class="col-dept">الإدارة</th>
               <th class="col-date">التاريخ</th>
-              <th class="col-records">سجلات البصمة</th>
+              <th class="col-io">وقت الحضور والانصراف</th>
               <th class="col-work">إجمالي ساعات العمل</th>
             </tr>
           </thead>

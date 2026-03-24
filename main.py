@@ -16,7 +16,13 @@ import hmac
 from urllib.parse import quote
 import models, schemas
 from database import engine, get_db
-from import_excel import import_from_excel, import_from_excel_bytes
+from import_excel import (
+    import_from_excel,
+    import_from_excel_bytes,
+    import_employees_only_from_excel_bytes,
+    import_permissions_from_excel_bytes,
+    import_leaves_from_excel_bytes,
+)
 
 # Create tables (new columns added)
 models.Base.metadata.create_all(bind=engine)
@@ -27,6 +33,30 @@ def _ensure_employee_allowance_columns() -> None:
             conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN leave_allowance_annual_days REAL DEFAULT 0.0")
         if "leave_allowance_casual_days" not in cols:
             conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN leave_allowance_casual_days REAL DEFAULT 0.0")
+        if "contract_end_date" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN contract_end_date TEXT")
+        if "national_id" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN national_id TEXT")
+        if "insurance_number" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN insurance_number TEXT")
+        if "education" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN education TEXT")
+        if "university" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN university TEXT")
+        if "marital_status" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN marital_status TEXT")
+        if "religion" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN religion TEXT")
+        if "governorate" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN governorate TEXT")
+        if "city" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN city TEXT")
+        if "area" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN area TEXT")
+        if "address" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN address TEXT")
+        if "iban" not in cols:
+            conn.exec_driver_sql("ALTER TABLE employees ADD COLUMN iban TEXT")
 
 _ensure_employee_allowance_columns()
 
@@ -80,7 +110,7 @@ async def auth_middleware(request: Request, call_next):
     if request.session.get("auth") is True:
         return await call_next(request)
 
-    html_exact = {"/", "/dashboard", "/daily", "/departments-page", "/upload"}
+    html_exact = {"/", "/dashboard", "/daily", "/departments-page", "/employees-page", "/upload"}
     is_html = path in html_exact or path.startswith("/department/") or path.startswith("/employee-page/")
     if is_html:
         next_url = request.url.path
@@ -185,13 +215,8 @@ def daily(request: Request):
 # ── Stats ──────────────────────────────────────────────────────────────────────
 @app.get("/stats")
 def get_stats(db: Session = Depends(get_db)):
-    # Filter stats to only include 'القوة' and 'Employee' (civilians) and exclude 'vistor'
-    q_filter = (
-        models.Employee.dept.like("%القوة%") &
-        ~models.Employee.dept.like("%vistor%") &
-        (models.Employee.job_title == "Employee")
-    )
-    
+    q_filter = ~models.Employee.dept.like("%vistor%")
+
     total       = db.query(func.count(models.Employee.id)).filter(q_filter).scalar()
     active      = db.query(func.count(models.Employee.id)).filter(q_filter, models.Employee.status == "active").scalar()
     avg_rests   = db.query(func.avg(models.Employee.rests)).filter(q_filter).scalar() or 0
@@ -216,8 +241,28 @@ def get_stats(db: Session = Depends(get_db)):
 # ── Departments ────────────────────────────────────────────────────────────────
 @app.get("/departments", response_model=List[str])
 def get_departments(db: Session = Depends(get_db)):
+    try:
+        rows = db.query(models.Department.name).order_by(models.Department.name.asc()).all()
+        names = [r[0] for r in rows if r[0]]
+        if not names:
+            emp_rows = db.query(func.distinct(models.Employee.dept)).all()
+            emp_names = [r[0] for r in emp_rows if r[0]]
+            existing = set()
+            for n in emp_names:
+                nn = str(n).strip()
+                if nn and nn not in existing:
+                    db.add(models.Department(name=nn))
+                    existing.add(nn)
+            if existing:
+                db.commit()
+            rows = db.query(models.Department.name).order_by(models.Department.name.asc()).all()
+            names = [r[0] for r in rows if r[0]]
+        if names:
+            return names
+    except Exception:
+        pass
     rows = db.query(func.distinct(models.Employee.dept)).all()
-    return [r[0] for r in rows if r[0]]
+    return sorted([r[0] for r in rows if r[0]])
 
 
 # ── Employees ──────────────────────────────────────────────────────────────────
@@ -226,9 +271,22 @@ def list_employees(
     search: Optional[str] = Query(None, description="Search by name or job title"),
     dept:   Optional[str] = Query(None, description="Filter by department"),
     status: Optional[str] = Query(None, description="Filter by status"),
+    ids:    Optional[str] = Query(None, description="Filter by employee ids (comma-separated)"),
     db:     Session = Depends(get_db),
 ):
     q = db.query(models.Employee)
+    if ids:
+        parsed: list[int] = []
+        for part in str(ids).replace(";", ",").split(","):
+            p = part.strip()
+            if not p:
+                continue
+            try:
+                parsed.append(int(p))
+            except Exception:
+                continue
+        if parsed:
+            q = q.filter(models.Employee.id.in_(parsed))
     if search:
         term = f"%{search}%"
         q = q.filter(
@@ -249,6 +307,14 @@ def list_employees(
 def create_employee(payload: schemas.EmployeeCreate, db: Session = Depends(get_db)):
     emp = models.Employee(**payload.model_dump())
     db.add(emp)
+    dept_name = (emp.dept or "").strip()
+    if dept_name:
+        try:
+            dep = db.query(models.Department).filter(models.Department.name == dept_name).first()
+            if dep is None:
+                db.add(models.Department(name=dept_name))
+        except Exception:
+            pass
     db.commit()
     db.refresh(emp)
     return emp
@@ -304,7 +370,7 @@ def delete_employee(emp_id: int, db: Session = Depends(get_db)):
 @app.post("/import/excel", response_model=schemas.ImportExcelResult)
 def import_excel(payload: schemas.ImportExcelRequest, db: Session = Depends(get_db)):
     _ = db
-    res = import_from_excel(file=payload.file, reset_db=payload.reset_db)
+    res = import_from_excel(file=payload.file, reset_db=payload.reset_db, allow_create_employees=False)
     return schemas.ImportExcelResult(
         file=res["file"],
         employees_upserted=res["employees_upserted"],
@@ -321,13 +387,46 @@ async def import_upload(
 ):
     _ = db
     content = await file.read()
-    res = import_from_excel_bytes(content, file_name=file.filename or "upload.xlsx", reset_db=reset_db)
+    res = import_from_excel_bytes(content, file_name=file.filename or "upload.xlsx", reset_db=reset_db, allow_create_employees=False)
     return schemas.ImportExcelResult(
         file=res["file"],
         employees_upserted=res["employees_upserted"],
         attendance_rows_upserted=res["attendance_rows_upserted"],
         distinct_dates=res["distinct_dates"],
     )
+
+
+@app.post("/import/employees/upload")
+async def import_employees_upload(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    _ = db
+    content = await file.read()
+    try:
+        return import_employees_only_from_excel_bytes(content, file_name=file.filename or "employees.xlsx")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"تعذر استيراد ملف الموظفين: {e}")
+
+
+@app.post("/import/permissions/upload")
+async def import_permissions_upload(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    _ = db
+    content = await file.read()
+    return import_permissions_from_excel_bytes(content, file_name=file.filename or "permissions.xlsx")
+
+
+@app.post("/import/leaves/upload")
+async def import_leaves_upload(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    _ = db
+    content = await file.read()
+    return import_leaves_from_excel_bytes(content, file_name=file.filename or "leaves.xlsx")
 
 
 # ── Attendance ────────────────────────────────────────────────────────────────
@@ -526,6 +625,11 @@ def employee_page(emp_id: int, request: Request):
     )
 
 
+@app.get("/employees-page", include_in_schema=False)
+def employees_page(request: Request):
+    return templates.TemplateResponse("employees.html", {"request": request})
+
+
 # ── Employee Summary ───────────────────────────────────────────────────────────
 @app.get("/employees/{emp_id}/summary", response_model=schemas.EmployeeSummaryOut)
 def employee_summary(emp_id: int, db: Session = Depends(get_db)):
@@ -580,11 +684,9 @@ def employee_summary(emp_id: int, db: Session = Depends(get_db)):
 # ── Department Employees Summary ───────────────────────────────────────────────
 @app.get("/departments/{dept_name}/employees", response_model=List[schemas.EmployeeSummaryOut])
 def dept_employees(dept_name: str, db: Session = Depends(get_db)):
-    # Filter by department, showing only active civilians
     employees = (
         db.query(models.Employee)
         .filter(models.Employee.dept == dept_name)
-        .filter(models.Employee.job_title == "Employee")
         .order_by(models.Employee.name)
         .all()
     )

@@ -22,6 +22,95 @@ function fmtRecords(v) {
   return s.replace(/[;,|]/g, m => `${m}\u200b`);
 }
 
+function parseHmToMinutes(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  const m = s.match(/(\d{1,2})\s*:\s*(\d{2})/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return hh * 60 + mm;
+}
+
+function parseDurationToMinutes(v) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  const m = s.match(/(\d{1,2})\s*:\s*(\d{2})/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || mm < 0 || mm > 59) return null;
+  return hh * 60 + mm;
+}
+
+function minutesToHm(mins) {
+  if (!Number.isFinite(mins)) return null;
+  let m = Math.round(mins);
+  m = ((m % (24 * 60)) + (24 * 60)) % (24 * 60);
+  const hh = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function extractInOut(row) {
+  const directIn = row?.actual_check_in_time != null && String(row.actual_check_in_time).trim() !== ''
+    ? String(row.actual_check_in_time).trim()
+    : null;
+  const directOut = row?.actual_check_out_time != null && String(row.actual_check_out_time).trim() !== ''
+    ? String(row.actual_check_out_time).trim()
+    : null;
+  const durationMins = parseDurationToMinutes(row?.total_work_hours);
+  if (directIn || directOut) {
+    if (durationMins != null) {
+      const inM = parseHmToMinutes(directIn);
+      const outM = parseHmToMinutes(directOut);
+      if (inM != null && outM == null) {
+        const computed = minutesToHm(inM + durationMins);
+        return { inTime: directIn, outTime: computed };
+      }
+      if (outM != null && inM == null) {
+        const computed = minutesToHm(outM - durationMins);
+        return { inTime: computed, outTime: directOut };
+      }
+    }
+    return { inTime: directIn, outTime: directOut };
+  }
+
+  const raw = row?.attendance_records;
+  if (raw == null || String(raw).trim() === '') return { inTime: null, outTime: null };
+
+  const s = String(raw)
+    .replace(/\s*:\s*/g, ':')
+    .replace(/\s*-\s*/g, '-')
+    .replace(/[؛،]/g, ',');
+
+  const times = (s.match(/\b\d{1,2}:\d{2}\b/g) || [])
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  if (times.length >= 2) return { inTime: times[0], outTime: times[times.length - 1] };
+  if (times.length === 1) {
+    if (durationMins != null) {
+      const inM = parseHmToMinutes(times[0]);
+      if (inM != null) {
+        return { inTime: times[0], outTime: minutesToHm(inM + durationMins) };
+      }
+    }
+    return { inTime: times[0], outTime: null };
+  }
+
+  const range = s.match(/\b\d{1,2}:\d{2}\b\s*-\s*\b\d{1,2}:\d{2}\b/);
+  if (range) {
+    const parts = range[0].split('-').map(x => x.trim());
+    return { inTime: parts[0] || null, outTime: parts[1] || null };
+  }
+
+  return { inTime: null, outTime: null };
+}
+
 function deptLabel(rawDept) {
   if (rawDept == null || rawDept === '') return '—';
   const s = String(rawDept);
@@ -118,7 +207,14 @@ function renderTable(rows) {
       <td class="col-name"><strong>${fmt(e.name)}</strong></td>
       <td class="col-dept">${deptLabel(e.dept)}</td>
       <td class="col-date"><span dir="ltr">${fmt(e.date)}</span></td>
-      <td class="col-records"><span dir="ltr">${fmtRecords(e.attendance_records)}</span></td>
+      <td class="col-io"><span dir="ltr">${(() => {
+        const io = extractInOut(e);
+        const a = fmtTime(io.inTime);
+        const b = fmtTime(io.outTime);
+        if (a === '—' && b === '—') return '—';
+        if (a !== '—' && b !== '—') return `${a} - ${b}`;
+        return a !== '—' ? a : b;
+      })()}</span></td>
       <td class="col-work"><span dir="ltr">${fmtTime(e.total_work_hours)}</span></td>
     </tr>`).join('');
 }

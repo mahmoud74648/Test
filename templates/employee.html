@@ -82,9 +82,29 @@
       font-family: inherit;
     }
     .balance-save { align-self: end; white-space: nowrap; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+    .info-item { background: rgba(10,16,32,.35); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
+    .info-label { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.70); margin-bottom: 6px; }
+    .info-value { font-size: 13px; color: rgba(255,255,255,.92); word-break: break-word; }
+    .edit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+    .edit-field { display: flex; flex-direction: column; gap: 6px; }
+    .edit-field label { font-size: 12px; font-weight: 800; color: rgba(255,255,255,.70); }
+    .edit-field input, .edit-field textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 9px 12px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+    .edit-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
     @media (max-width: 900px) {
       .balance-grid { grid-template-columns: 1fr; }
       .balance-save { width: 100%; }
+      .info-grid { grid-template-columns: 1fr; }
+      .edit-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -104,6 +124,7 @@
         <a class="btn btn-ghost" href="/">الشهر</a>
         <a class="btn btn-ghost" href="/upload">رفع ملف</a>
         <a class="btn btn-ghost" href="/dashboard">الداشبورد</a>
+        <a class="btn btn-ghost" href="/employees-page">الموظفين</a>
         <a class="btn btn-primary" href="/departments-page">الإدارات</a>
         <a class="btn btn-danger" href="/logout">خروج</a>
       </div>
@@ -130,6 +151,35 @@
 
     <!-- KPI Row -->
     <section class="kpi-grid" id="kpiRow"></section>
+
+    <section class="balance-card" id="infoCard">
+      <div class="balance-title">بيانات الموظف</div>
+      <div class="info-grid" id="infoGrid"></div>
+    </section>
+
+    <section class="balance-card" id="editCard">
+      <div class="balance-title">تعديل بيانات الموظف</div>
+      <div class="edit-grid">
+        <div class="edit-field"><label>الموبايل</label><input id="editPhone" type="text" /></div>
+        <div class="edit-field"><label>الرقم القومي</label><input id="editNationalId" type="text" /></div>
+        <div class="edit-field"><label>رقم التأمين</label><input id="editInsurance" type="text" /></div>
+        <div class="edit-field"><label>تاريخ التعيين</label><input id="editJoinDate" type="date" /></div>
+        <div class="edit-field"><label>تاريخ انتهاء العقد</label><input id="editContractEndDate" type="date" /></div>
+        <div class="edit-field"><label>المؤهل</label><input id="editEducation" type="text" /></div>
+        <div class="edit-field"><label>الجامعة</label><input id="editUniversity" type="text" /></div>
+        <div class="edit-field"><label>الحالة الاجتماعية</label><input id="editMaritalStatus" type="text" /></div>
+        <div class="edit-field"><label>الديانة</label><input id="editReligion" type="text" /></div>
+        <div class="edit-field"><label>المحافظة</label><input id="editGovernorate" type="text" /></div>
+        <div class="edit-field"><label>المركز/المدينة</label><input id="editCity" type="text" /></div>
+        <div class="edit-field"><label>المنطقة/القرية</label><input id="editArea" type="text" /></div>
+        <div class="edit-field" style="grid-column: 1 / -1"><label>العنوان</label><textarea id="editAddress" rows="2"></textarea></div>
+        <div class="edit-field" style="grid-column: 1 / -1"><label>IBAN</label><input id="editIban" type="text" /></div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn btn-primary" onclick="saveEmployeeInfo()">حفظ البيانات</button>
+        <button class="btn btn-danger" onclick="deleteEmployee()">حذف الموظف</button>
+      </div>
+    </section>
 
     <section class="balance-card" id="balanceCard">
       <div class="balance-title">رصيد الإجازات (إدخال يدوي لكل موظف)</div>
@@ -168,6 +218,11 @@
     let leavesData = [], permsData = [], deductsData = [];
     let currentTab = 'leaves';
 
+    function getParam(name) {
+      const v = new URLSearchParams(window.location.search).get(name);
+      return v == null || v === '' ? null : v;
+    }
+
     function showToast(msg, type='success') {
       const t = document.getElementById('toast');
       t.textContent = msg; t.className = `toast ${type} show`;
@@ -189,8 +244,13 @@
 
     async function loadProfile() {
       try {
-        const r = await fetch(`/employees/${empId}/summary`);
-        const emp = await r.json();
+        const [sumR, empR] = await Promise.all([
+          fetch(`/employees/${empId}/summary`),
+          fetch(`/employees/${empId}`),
+        ]);
+        if (!sumR.ok) throw new Error('summary');
+        const summary = await sumR.json();
+        const emp = empR.ok ? await empR.json() : summary;
 
         // Back link with dept
         const deptEnc = encodeURIComponent(emp.dept||'');
@@ -219,38 +279,79 @@
           </div>`;
 
         const fmt = v => (Number(v||0)%1===0)?Number(v||0):(Number(v||0)).toFixed(1);
-        document.getElementById('allowAnnual').value = fmt(emp.leave_allowance_annual_days || 0);
-        document.getElementById('allowCasual').value = fmt(emp.leave_allowance_casual_days || 0);
+        document.getElementById('allowAnnual').value = fmt(summary.leave_allowance_annual_days || 0);
+        document.getElementById('allowCasual').value = fmt(summary.leave_allowance_casual_days || 0);
+
+        const info = (label, value) => `
+          <div class="info-item">
+            <div class="info-label">${label}</div>
+            <div class="info-value">${value || '—'}</div>
+          </div>`;
+        const infoGrid = document.getElementById('infoGrid');
+        if (infoGrid) {
+          infoGrid.innerHTML = [
+            info('الموبايل', emp.phone),
+            info('الرقم القومي', emp.national_id),
+            info('رقم التأمين', emp.insurance_number),
+            info('تاريخ التعيين', emp.join_date),
+            info('تاريخ انتهاء العقد', emp.contract_end_date),
+            info('المؤهل', emp.education),
+            info('الجامعة', emp.university),
+            info('الحالة الاجتماعية', emp.marital_status),
+            info('الديانة', emp.religion),
+            info('المحافظة', emp.governorate),
+            info('المركز/المدينة', emp.city),
+            info('المنطقة/القرية', emp.area),
+            info('العنوان', emp.address),
+            info('IBAN', emp.iban),
+          ].join('');
+        }
+        const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : String(v)); };
+        setVal('editPhone', emp.phone);
+        setVal('editNationalId', emp.national_id);
+        setVal('editInsurance', emp.insurance_number);
+        setVal('editJoinDate', emp.join_date);
+        setVal('editContractEndDate', emp.contract_end_date);
+        setVal('editEducation', emp.education);
+        setVal('editUniversity', emp.university);
+        setVal('editMaritalStatus', emp.marital_status);
+        setVal('editReligion', emp.religion);
+        setVal('editGovernorate', emp.governorate);
+        setVal('editCity', emp.city);
+        setVal('editArea', emp.area);
+        setVal('editAddress', emp.address);
+        setVal('editIban', emp.iban);
+
         document.getElementById('kpiRow').innerHTML = `
           <div class="kpi-card"><div class="kpi-icon kpi-green">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">رصيد سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.leave_allowance_annual_days)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">رصيد سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(summary.leave_allowance_annual_days)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-green">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><path d="M12 3v18"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">مستخدم سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.total_annual_leave)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">مستخدم سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(summary.total_annual_leave)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-green">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">المتبقي سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(emp.annual_leave_remaining_days)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">المتبقي سنوية</span><span class="kpi-value" style="color:var(--green)">${fmt(summary.annual_leave_remaining_days)}</span></div></div>
 
           <div class="kpi-card"><div class="kpi-icon kpi-blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">رصيد عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.leave_allowance_casual_days)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">رصيد عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(summary.leave_allowance_casual_days)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/><path d="M12 3v18"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">مستخدم عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.total_casual_leave)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">مستخدم عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(summary.total_casual_leave)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-blue">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">المتبقي عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(emp.casual_leave_remaining_days)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">المتبقي عارضة</span><span class="kpi-value" style="color:var(--blue)">${fmt(summary.casual_leave_remaining_days)}</span></div></div>
 
           <div class="kpi-card"><div class="kpi-icon kpi-orange">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">ساعات إذن</span><span class="kpi-value" style="color:var(--orange)">${fmt(emp.total_permission_hours)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">ساعات إذن</span><span class="kpi-value" style="color:var(--orange)">${fmt(summary.total_permission_hours)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-red">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><rect x="6" y="6" width="12" height="16" rx="2"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">خصم (أيام)</span><span class="kpi-value" style="color:var(--red)">${fmt(emp.total_deduction_days)}</span></div></div>
+            </div><div class="kpi-body"><span class="kpi-label">خصم (أيام)</span><span class="kpi-value" style="color:var(--red)">${fmt(summary.total_deduction_days)}</span></div></div>
           <div class="kpi-card"><div class="kpi-icon kpi-purple">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div><div class="kpi-body"><span class="kpi-label">المتبقي النهائي</span><span class="kpi-value" style="color:var(--purple)">${fmt(emp.leave_remaining_days)}</span></div></div>`;
+            </div><div class="kpi-body"><span class="kpi-label">المتبقي النهائي</span><span class="kpi-value" style="color:var(--purple)">${fmt(summary.leave_remaining_days)}</span></div></div>`;
       } catch {
         showToast('فشل تحميل بيانات الموظف','error');
       }
@@ -274,6 +375,49 @@
       await loadProfile();
     }
 
+    async function saveEmployeeInfo() {
+      const body = {
+        phone: (document.getElementById('editPhone').value || '').trim() || null,
+        national_id: (document.getElementById('editNationalId').value || '').trim() || null,
+        insurance_number: (document.getElementById('editInsurance').value || '').trim() || null,
+        join_date: (document.getElementById('editJoinDate').value || '').trim() || null,
+        contract_end_date: (document.getElementById('editContractEndDate').value || '').trim() || null,
+        education: (document.getElementById('editEducation').value || '').trim() || null,
+        university: (document.getElementById('editUniversity').value || '').trim() || null,
+        marital_status: (document.getElementById('editMaritalStatus').value || '').trim() || null,
+        religion: (document.getElementById('editReligion').value || '').trim() || null,
+        governorate: (document.getElementById('editGovernorate').value || '').trim() || null,
+        city: (document.getElementById('editCity').value || '').trim() || null,
+        area: (document.getElementById('editArea').value || '').trim() || null,
+        address: (document.getElementById('editAddress').value || '').trim() || null,
+        iban: (document.getElementById('editIban').value || '').trim() || null,
+      };
+      const r = await fetch(`/employees/${empId}`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحفظ','error');
+        return;
+      }
+      showToast('تم حفظ البيانات ✓');
+      await loadProfile();
+    }
+
+    async function deleteEmployee() {
+      if (!confirm('هل تريد حذف الموظف؟ سيتم حذف الإجازات والأذونات والخصومات الخاصة به.')) return;
+      const r = await fetch(`/employees/${empId}`, { method: 'DELETE' });
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        showToast((j && j.detail) ? j.detail : 'فشل الحذف','error');
+        return;
+      }
+      showToast('تم حذف الموظف');
+      setTimeout(() => { window.location.href = '/departments-page'; }, 600);
+    }
+
     async function loadHistory() {
       try {
         const [lR, pR, dR] = await Promise.all([
@@ -284,7 +428,7 @@
         leavesData = await lR.json();
         permsData = await pR.json();
         deductsData = await dR.json();
-        renderTab();
+        switchTab(currentTab);
       } catch { showToast('فشل تحميل السجلات','error'); }
     }
 
@@ -347,6 +491,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      const tab = (getParam('tab') || '').toLowerCase();
+      if (tab === 'perms' || tab === 'permissions') currentTab = 'perms';
+      else if (tab === 'deducts' || tab === 'deductions') currentTab = 'deducts';
+      else currentTab = 'leaves';
       loadProfile();
       loadHistory();
     });
