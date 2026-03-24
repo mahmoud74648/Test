@@ -2,12 +2,23 @@ import pandas as pd
 import re
 import io
 from typing import Optional, Tuple, Dict, Any, List
+from pathlib import Path
 from sqlalchemy import func, case
 from database import engine
 from models import Base, Department, Employee, AttendanceRecord, MonthlyEmployeeStats, Leave, Permission
 from sqlalchemy.orm import Session
 
-DEFAULT_EXCEL_FILE = "test0-hik.xlsx"
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_EXCEL_FILE = str(BASE_DIR / "test0-hik.xlsx")
+
+def _resolve_excel_path(file: str) -> str:
+    p = Path(str(file))
+    if p.is_absolute():
+        return str(p)
+    if p.exists():
+        return str(p)
+    candidate = BASE_DIR / p
+    return str(candidate)
 
 def _normalize_col(c: Any) -> str:
     s = str(c).strip().lower()
@@ -815,15 +826,16 @@ def import_leaves_from_excel_bytes(content: bytes, file_name: str = "leaves.xlsx
     }
 
 def import_from_excel(file: str = DEFAULT_EXCEL_FILE, reset_db: bool = True, allow_create_employees: bool = True) -> Dict[str, Any]:
+    resolved_file = _resolve_excel_path(file)
     try:
-        df_preview = pd.read_excel(file, header=None, nrows=20)
+        df_preview = pd.read_excel(resolved_file, header=None, nrows=20)
     except FileNotFoundError:
-        raise FileNotFoundError(f"'{file}' not found. Place it in the same directory.") from None
+        raise FileNotFoundError(f"'{file}' not found (tried: '{resolved_file}').") from None
 
     detected_test0_hik = False
     header_row = None
     try:
-        header_row = _detect_header_row_for_test0_hik(file)
+        header_row = _detect_header_row_for_test0_hik(resolved_file)
         detected_test0_hik = header_row is not None
     except Exception:
         detected_test0_hik = False
@@ -840,7 +852,7 @@ def import_from_excel(file: str = DEFAULT_EXCEL_FILE, reset_db: bool = True, all
 
     with Session(engine) as db:
         if detected_test0_hik:
-            df = _read_test0_hik(file)
+            df = _read_test0_hik(resolved_file)
             distinct_dates = sorted({str(d) for d in df.get("date", pd.Series(dtype=str)).dropna().unique().tolist()})
 
             for _, row in df.iterrows():
@@ -913,7 +925,7 @@ def import_from_excel(file: str = DEFAULT_EXCEL_FILE, reset_db: bool = True, all
 
             _recompute_monthly_stats(db, _extract_year_months(distinct_dates))
         else:
-            df = _read_employee_list(file)
+            df = _read_employee_list(resolved_file)
             for _, row in df.iterrows():
                 data = {k: (None if pd.isna(v) else v) for k, v in row.items()}
                 code = _none_if_blank(data.get("employee_code"))
@@ -939,7 +951,7 @@ def import_from_excel(file: str = DEFAULT_EXCEL_FILE, reset_db: bool = True, all
         db.commit()
 
     return {
-        "file": file,
+        "file": resolved_file,
         "employees_upserted": employees_upserted,
         "attendance_rows_upserted": attendance_rows_upserted,
         "distinct_dates": distinct_dates,

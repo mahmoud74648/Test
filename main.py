@@ -13,6 +13,7 @@ import calendar
 from datetime import date as dt_date
 import os
 import hmac
+from pathlib import Path
 from urllib.parse import quote
 import models, schemas
 from database import engine, get_db
@@ -69,8 +70,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 @app.get("/debug/info", include_in_schema=False)
 def debug_info():
