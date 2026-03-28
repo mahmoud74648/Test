@@ -133,8 +133,8 @@ def login_page(request: Request, next: Optional[str] = None, error: Optional[str
     if request.session.get("auth") is True:
         return RedirectResponse(url="/dashboard", status_code=302)
     return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "next": _safe_next_url(next), "error": error},
+        name="login.html",
+        context={"request": request, "next": _safe_next_url(next), "error": error},
     )
 
 @app.post("/login", include_in_schema=False)
@@ -168,8 +168,8 @@ def month_overview(request: Request):
     year_month = f"{today.year:04d}-{today.month:02d}"
     days_in_month = calendar.monthrange(today.year, today.month)[1]
     return templates.TemplateResponse(
-        "month.html",
-        {"request": request, "year_month": year_month, "days_in_month": days_in_month},
+        name="month.html",
+        context={"request": request, "year_month": year_month, "days_in_month": days_in_month},
     )
 
 
@@ -200,18 +200,18 @@ def calendar_status(
 # ── Upload ─────────────────────────────────────────────────────────────────────
 @app.get("/upload", include_in_schema=False)
 def upload_page(request: Request):
-    return templates.TemplateResponse("upload.html", {"request": request})
+    return templates.TemplateResponse(name="upload.html", context={"request": request})
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
 @app.get("/dashboard", include_in_schema=False)
 def dashboard(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(name="index.html", context={"request": request})
 
 
 @app.get("/daily", include_in_schema=False)
 def daily(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(name="index.html", context={"request": request})
 
 
 # ── Stats ──────────────────────────────────────────────────────────────────────
@@ -610,26 +610,26 @@ def employee_attendance(emp_id: int, db: Session = Depends(get_db)):
 # ── Department Pages ───────────────────────────────────────────────────────────
 @app.get("/departments-page", include_in_schema=False)
 def departments_page(request: Request):
-    return templates.TemplateResponse("departments.html", {"request": request})
+    return templates.TemplateResponse(name="departments.html", context={"request": request})
 
 
 @app.get("/department/{dept_name}", include_in_schema=False)
 def department_page(dept_name: str, request: Request):
     return templates.TemplateResponse(
-        "department.html", {"request": request, "dept_name": dept_name}
+        name="department.html", context={"request": request, "dept_name": dept_name}
     )
 
 
 @app.get("/employee-page/{emp_id}", include_in_schema=False)
 def employee_page(emp_id: int, request: Request):
     return templates.TemplateResponse(
-        "employee.html", {"request": request, "emp_id": emp_id}
+        name="employee.html", context={"request": request, "emp_id": emp_id}
     )
 
 
 @app.get("/employees-page", include_in_schema=False)
 def employees_page(request: Request):
-    return templates.TemplateResponse("employees.html", {"request": request})
+    return templates.TemplateResponse(name="employees.html", context={"request": request})
 
 
 # ── Employee Summary ───────────────────────────────────────────────────────────
