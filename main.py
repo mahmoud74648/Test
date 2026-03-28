@@ -14,6 +14,7 @@ from datetime import date as dt_date
 import os
 import hmac
 from pathlib import Path
+import inspect
 from urllib.parse import quote
 import models, schemas
 from database import engine, get_db
@@ -74,6 +75,17 @@ BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+def _render_template(request: Request, name: str, context: dict):
+    ctx = dict(context or {})
+    ctx.setdefault("request", request)
+    try:
+        sig = inspect.signature(templates.TemplateResponse)
+        if "request" in sig.parameters:
+            return templates.TemplateResponse(request, name, ctx)
+    except Exception:
+        pass
+    return templates.TemplateResponse(name, ctx)
+
 @app.get("/debug/info", include_in_schema=False)
 def debug_info():
     with engine.connect() as conn:
@@ -132,10 +144,7 @@ app.add_middleware(
 def login_page(request: Request, next: Optional[str] = None, error: Optional[str] = None):
     if request.session.get("auth") is True:
         return RedirectResponse(url="/dashboard", status_code=302)
-    return templates.TemplateResponse(
-        name="login.html",
-        context={"request": request, "next": _safe_next_url(next), "error": error},
-    )
+    return _render_template(request, "login.html", {"next": _safe_next_url(next), "error": error})
 
 @app.post("/login", include_in_schema=False)
 def login_submit(
@@ -167,10 +176,7 @@ def month_overview(request: Request):
     today = dt_date.today()
     year_month = f"{today.year:04d}-{today.month:02d}"
     days_in_month = calendar.monthrange(today.year, today.month)[1]
-    return templates.TemplateResponse(
-        name="month.html",
-        context={"request": request, "year_month": year_month, "days_in_month": days_in_month},
-    )
+    return _render_template(request, "month.html", {"year_month": year_month, "days_in_month": days_in_month})
 
 
 @app.get("/latest-date")
@@ -200,18 +206,18 @@ def calendar_status(
 # ── Upload ─────────────────────────────────────────────────────────────────────
 @app.get("/upload", include_in_schema=False)
 def upload_page(request: Request):
-    return templates.TemplateResponse(name="upload.html", context={"request": request})
+    return _render_template(request, "upload.html", {})
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
 @app.get("/dashboard", include_in_schema=False)
 def dashboard(request: Request):
-    return templates.TemplateResponse(name="index.html", context={"request": request})
+    return _render_template(request, "index.html", {})
 
 
 @app.get("/daily", include_in_schema=False)
 def daily(request: Request):
-    return templates.TemplateResponse(name="index.html", context={"request": request})
+    return _render_template(request, "index.html", {})
 
 
 # ── Stats ──────────────────────────────────────────────────────────────────────
@@ -610,26 +616,22 @@ def employee_attendance(emp_id: int, db: Session = Depends(get_db)):
 # ── Department Pages ───────────────────────────────────────────────────────────
 @app.get("/departments-page", include_in_schema=False)
 def departments_page(request: Request):
-    return templates.TemplateResponse(name="departments.html", context={"request": request})
+    return _render_template(request, "departments.html", {})
 
 
 @app.get("/department/{dept_name}", include_in_schema=False)
 def department_page(dept_name: str, request: Request):
-    return templates.TemplateResponse(
-        name="department.html", context={"request": request, "dept_name": dept_name}
-    )
+    return _render_template(request, "department.html", {"dept_name": dept_name})
 
 
 @app.get("/employee-page/{emp_id}", include_in_schema=False)
 def employee_page(emp_id: int, request: Request):
-    return templates.TemplateResponse(
-        name="employee.html", context={"request": request, "emp_id": emp_id}
-    )
+    return _render_template(request, "employee.html", {"emp_id": emp_id})
 
 
 @app.get("/employees-page", include_in_schema=False)
 def employees_page(request: Request):
-    return templates.TemplateResponse(name="employees.html", context={"request": request})
+    return _render_template(request, "employees.html", {})
 
 
 # ── Employee Summary ───────────────────────────────────────────────────────────
